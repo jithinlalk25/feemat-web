@@ -8,6 +8,8 @@ import MembersPage from "./pages/MembersPage";
 import { Toaster } from "sonner";
 import FormDetailsPage from "./pages/form/FormDetailsPage";
 import FormSubmissionPage from "./pages/form/FormSubmissionPage";
+import { OverviewPage } from "./pages/OverviewPage";
+import { SupportPage } from "@/pages/SupportPage";
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
             <Route path="forms/:formId" element={<FormDetailsPage />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="overview" element={<OverviewPage />} />
+            <Route path="support" element={<SupportPage />} />
           </Route>
           <Route
             path="/form-submission/:linkId"

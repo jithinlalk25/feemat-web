@@ -156,6 +156,16 @@ interface FormSubmission {
   };
 }
 
+interface OverviewStats {
+  _id: string;
+  companyId: string;
+  formCount: number;
+  formSentCount: number;
+  submissionCount: number;
+  groupCount: number;
+  memberCount: number;
+}
+
 class ApiService {
   // GET request
   static async get<T>(endpoint: string): Promise<T> {
@@ -307,6 +317,14 @@ class ApiService {
     return this.get<FormSubmission[]>(
       `${API_ENDPOINTS.FORMS.SUBMISSIONS(formSentId)}`
     );
+  }
+
+  static async getOverviewStats(): Promise<OverviewStats> {
+    return this.get<OverviewStats>(API_ENDPOINTS.OVERVIEW.STATS);
+  }
+
+  static async sendForm(formId: string): Promise<any> {
+    return this.post(`${API_ENDPOINTS.FORMS.SEND(formId)}`, {});
   }
 }
 

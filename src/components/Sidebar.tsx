@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import { FileText, Users } from "lucide-react";
+import { FileText, Users, LayoutDashboard, Headphones } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Logo } from "./Logo";
 
 interface SidebarProps {
   userEmail: string;
@@ -23,28 +24,42 @@ const Sidebar = ({ userEmail, companyName = "Company" }: SidebarProps) => {
   return (
     <div className="flex h-screen w-64 flex-col bg-gray-50 border-r">
       {/* Header */}
-      <div className="p-6 border-b">
-        <div className="space-y-4">
-          {/* Feemat title */}
-          <h1 className="font-semibold text-2xl">Feemat</h1>
-
-          {/* Company section */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-sm font-semibold text-primary-foreground">
-                {getInitial(companyName)}
-              </span>
-            </div>
-            <div>
-              <p className="font-medium text-base">{companyName}</p>
-            </div>
+      <div className="p-4 border-b ">
+        <div className="flex flex-col">
+          <div className="w-24">
+            <Logo />
           </div>
+        </div>
+      </div>
+
+      <div className="px-4 pt-4 pb-0">
+        <div className="flex items-center gap-3 ">
+          <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center">
+            <span className="text-sm font-semibold text-gray-200">
+              {companyName.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <span className="text-base font-bold text-gray-700">
+            {companyName}
+          </span>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-4">
         <div className="space-y-2">
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start gap-2",
+              isPathStartsWith("/dashboard/overview") &&
+                "bg-gray-200 hover:bg-gray-300"
+            )}
+            onClick={() => navigate("/dashboard/overview")}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Overview
+          </Button>
           <Button
             variant="ghost"
             className={cn(
@@ -71,6 +86,22 @@ const Sidebar = ({ userEmail, companyName = "Company" }: SidebarProps) => {
           </Button>
         </div>
       </nav>
+
+      {/* Support */}
+      <div className="p-4">
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start gap-2",
+            location.pathname === "/dashboard/support" &&
+              "bg-gray-200 hover:bg-gray-300"
+          )}
+          onClick={() => navigate("/dashboard/support")}
+        >
+          <Headphones className="w-4 h-4" />
+          Contact Support
+        </Button>
+      </div>
 
       {/* Footer */}
       <div className="p-4 border-t">

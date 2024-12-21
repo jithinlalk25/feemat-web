@@ -1,9 +1,10 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import { useEffect, useState } from "react";
 import ApiService from "@/lib/api/api";
 
 export function DashboardPage() {
+  const location = useLocation();
   const [userEmail, setUserEmail] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
 
@@ -28,7 +29,11 @@ export function DashboardPage() {
     <div className="flex h-screen">
       <Sidebar userEmail={userEmail} companyName={companyName} />
       <main className="flex-1 overflow-auto">
-        <Outlet />
+        {location.pathname === "/dashboard" ? (
+          <Navigate to="/dashboard/overview" replace />
+        ) : (
+          <Outlet />
+        )}
       </main>
     </div>
   );

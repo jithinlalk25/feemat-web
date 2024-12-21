@@ -3,7 +3,7 @@ import { useParams, useLocation } from "react-router-dom";
 import ApiService from "../../lib/api/api";
 import { Breadcrumb } from "../../components/ui/breadcrumb";
 import { Button } from "../../components/ui/button";
-import { Pencil, Eye, MoreVertical } from "lucide-react";
+import { Send, Pencil, Eye, MoreVertical } from "lucide-react";
 import EditFormPage from "../EditFormPage";
 import {
   Table,
@@ -43,6 +43,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../../components/ui/alert-dialog";
 
 interface FormSent {
   _id: string;
@@ -200,6 +212,7 @@ const FormDetailsPage = () => {
   );
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
 
   useEffect(() => {
     // Check if we should open the editor (when coming from form creation)
@@ -265,6 +278,21 @@ const FormDetailsPage = () => {
       console.error("Error fetching submissions:", error);
     } finally {
       setLoadingSubmissions(false);
+    }
+  };
+
+  const handleSendForm = async () => {
+    try {
+      await ApiService.sendForm(formId!);
+      // Refresh the forms sent list
+      const formsSentData = await ApiService.getFormsSent(formId!);
+      setFormsSent(formsSentData);
+      toast.success("Form has been sent successfully");
+    } catch (error) {
+      console.error("Error sending form:", error);
+      toast.error("Failed to send form. Please try again.");
+    } finally {
+      setIsSendDialogOpen(false);
     }
   };
 
@@ -382,19 +410,47 @@ const FormDetailsPage = () => {
         <>
           <div className="mt-6 flex justify-between items-center mb-6">
             <h1 className="text-2xl font-semibold">{form.title}</h1>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="w-5 h-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit Form
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              <AlertDialog
+                open={isSendDialogOpen}
+                onOpenChange={setIsSendDialogOpen}
+              >
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Form Now
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Send Form</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to send this form? This action
+                      cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleSendForm}>
+                      Send
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Form
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <div className="mt-8">
@@ -422,7 +478,10 @@ const FormDetailsPage = () => {
                       {formsSent.map((formSent) => (
                         <TableRow key={formSent._id}>
                           <TableCell>
-                            {format(new Date(formSent.createdAt), "PPP")}
+                            {format(
+                              new Date(formSent.createdAt),
+                              "MMM d, yyyy p"
+                            )}
                           </TableCell>
                           <TableCell>{formSent.submissionCount}</TableCell>
                           <TableCell>

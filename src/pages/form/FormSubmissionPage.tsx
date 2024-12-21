@@ -320,8 +320,10 @@ export default function FormSubmissionPage() {
             <div className="flex flex-col items-center justify-center gap-4 py-12">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-base font-bold">
-                    {formData.companyName.charAt(0)}
+                  <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center">
+                    <span className="text-sm font-semibold text-gray-200">
+                      {formData.companyName.charAt(0).toUpperCase()}
+                    </span>
                   </div>
                   <span className="text-lg font-semibold">
                     {formData.companyName}
@@ -355,8 +357,10 @@ export default function FormSubmissionPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-base font-bold">
-              {formData.companyName.charAt(0)}
+            <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center">
+              <span className="text-sm font-semibold text-gray-200">
+                {formData.companyName.charAt(0).toUpperCase()}
+              </span>
             </div>
             <span className="text-lg font-semibold">
               {formData.companyName}

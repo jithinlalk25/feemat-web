@@ -37,6 +37,10 @@ export const API_ENDPOINTS = {
     SENT: (formId: string) => `/forms/${formId}/sent`,
     SUBMISSIONS: (formSentId: string) =>
       `/forms/sent/${formSentId}/submissions`,
+    SEND: (formId: string) => `/forms/${formId}/send`,
+  },
+  OVERVIEW: {
+    STATS: "/overview",
   },
   // Add more endpoints as needed
 } as const;
