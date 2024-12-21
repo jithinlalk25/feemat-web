@@ -210,6 +210,9 @@ class ApiService {
     if (response.access_token) {
       localStorage.setItem("token", response.access_token);
     }
+    if (response.timezone) {
+      localStorage.setItem("timezone", response.timezone);
+    }
     return response;
   }
 
@@ -224,6 +227,7 @@ class ApiService {
   static async signOut() {
     // await this.post("/auth/signout", {});
     localStorage.removeItem("token");
+    localStorage.removeItem("timezone");
   }
 
   static async getMembers(): Promise<Member[]> {

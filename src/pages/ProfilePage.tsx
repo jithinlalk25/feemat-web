@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 const ProfilePage = () => {
   const [userEmail, setUserEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [timezone, setTimezone] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,6 +19,7 @@ const ProfilePage = () => {
         ]);
         setUserEmail(profile.email);
         setCompanyName(company.name);
+        setTimezone(company.timezone);
       } catch (err) {
         console.error("Failed to load profile data:", err);
       }
@@ -51,6 +53,12 @@ const ProfilePage = () => {
           <div>
             <label className="text-sm font-medium text-gray-500">Company</label>
             <p className="text-base mt-1">{companyName || "Loading..."}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-500">
+              Timezone
+            </label>
+            <p className="text-base mt-1">{timezone || "Loading..."}</p>
           </div>
           <div className="pt-4">
             <Button variant="outline" onClick={handleSignOut}>

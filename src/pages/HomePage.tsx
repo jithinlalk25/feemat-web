@@ -160,23 +160,26 @@ function SignUpForm({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const date = new Date();
-    const offsetInMinutes = date.getTimezoneOffset();
-    const offsetHours = -offsetInMinutes / 60;
-
-    const offsetSign = offsetHours >= 0 ? "+" : "-";
-    const absoluteHours = Math.abs(Math.floor(offsetHours));
-    const minutes = Math.abs(offsetInMinutes % 60);
-
-    const offsetString = `UTC${offsetSign}${absoluteHours
-      .toString()
-      .padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+    // Get user's timezone using Intl.DateTimeFormat
+    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    console.log("Detected user timezone:", userTimeZone);
 
     // Find matching timezone in our list
-    const matchingTimezone = timezones.find((tz) => tz.value === offsetString);
+    const matchingTimezone = timezones.find((tz) => tz.value === userTimeZone);
+    console.log("Found matching timezone:", matchingTimezone);
 
     if (matchingTimezone) {
       setSelectedTimezone(matchingTimezone.value);
+      console.log("Set selected timezone to:", matchingTimezone.value);
+    } else {
+      // Fallback to a default timezone if no match is found
+      const defaultTimezone = timezones.find(
+        (tz) => tz.value === "America/New_York"
+      );
+      if (defaultTimezone) {
+        setSelectedTimezone(defaultTimezone.value);
+        console.log("No match found, falling back to:", defaultTimezone.value);
+      }
     }
   }, []);
 

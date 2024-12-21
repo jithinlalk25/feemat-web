@@ -1,11 +1,6 @@
 // Central place to store all API endpoints
 export const API_ENDPOINTS = {
-  USERS: "/users",
-  USER_BY_ID: (id: number) => `/users/${id}`,
   AUTH: {
-    LOGIN: "/auth/login",
-    REGISTER: "/auth/register",
-    LOGOUT: "/auth/logout",
     SIGNUP: "/auth/signup",
     VERIFY_OTP: "/auth/verify-otp",
     SIGNIN: "/auth/signin",

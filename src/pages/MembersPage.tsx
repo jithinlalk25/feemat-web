@@ -37,6 +37,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
+import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
 // Define the type for our data
 interface Member {
@@ -67,7 +69,7 @@ type SortDirection = "asc" | "desc" | null;
 const MembersPage = () => {
   const [activeTab, setActiveTab] = useState<"members" | "groups">("members");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,6 +101,7 @@ const MembersPage = () => {
   } | null>(null);
   const [newGroupNameInput, setNewGroupNameInput] = useState("");
   const [groupSearchQuery, setGroupSearchQuery] = useState("");
+  const [timezone, setTimezone] = useState<string>("");
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -131,6 +134,14 @@ const MembersPage = () => {
     fetchGroups();
   }, []);
 
+  useEffect(() => {
+    // Get timezone from localStorage or fall back to system timezone
+    const storedTimezone =
+      localStorage.getItem("timezone") ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setTimezone(storedTimezone);
+  }, []);
+
   const toggleSort = () => {
     setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
   };
@@ -140,8 +151,9 @@ const MembersPage = () => {
       member.email.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
-      const compareResult = a.email.localeCompare(b.email);
-      return sortDirection === "asc" ? compareResult : -compareResult;
+      const compareResult =
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return sortDirection === "asc" ? -compareResult : compareResult;
     });
 
   const toggleRow = (id: string) => {
@@ -280,6 +292,10 @@ const MembersPage = () => {
         [groupId]: [],
       }));
 
+      // Refresh members data to update their group associations
+      const updatedMembers = await ApiService.getMembers();
+      setMembers(updatedMembers);
+
       toast.success("Members removed from group");
     } catch (error) {
       console.error("Failed to remove members from group:", error);
@@ -295,6 +311,11 @@ const MembersPage = () => {
       setGroups((prevGroups) =>
         prevGroups.filter((group) => group._id !== groupId)
       );
+
+      // Refresh members data to update their group associations
+      const updatedMembers = await ApiService.getMembers();
+      setMembers(updatedMembers);
+
       toast.success("Group deleted successfully");
     } catch (error) {
       console.error("Failed to delete group:", error);
@@ -329,6 +350,10 @@ const MembersPage = () => {
       const updatedGroups = await ApiService.getGroups();
       setGroups(updatedGroups);
 
+      // Refresh members data to update their group associations
+      const updatedMembers = await ApiService.getMembers();
+      setMembers(updatedMembers);
+
       setIsGroupDialogOpen(false);
       setNewGroupName("");
       setNewGroupEmails("");
@@ -349,7 +374,7 @@ const MembersPage = () => {
     if (!groupSortDirections[groupId]) {
       setGroupSortDirections((prev) => ({
         ...prev,
-        [groupId]: "asc",
+        [groupId]: "desc",
       }));
     }
   };
@@ -376,6 +401,10 @@ const MembersPage = () => {
       // Refresh groups to get updated data
       const updatedGroups = await ApiService.getGroups();
       setGroups(updatedGroups);
+
+      // Refresh members data to update their group associations
+      const updatedMembers = await ApiService.getMembers();
+      setMembers(updatedMembers);
 
       setIsAddMembersDialogOpen(false);
       setAddMembersInput("");
@@ -408,6 +437,10 @@ const MembersPage = () => {
         )
       );
 
+      // Refresh members data to update their group associations
+      const updatedMembers = await ApiService.getMembers();
+      setMembers(updatedMembers);
+
       setIsRenameDialogOpen(false);
       setGroupToRename(null);
       setNewGroupNameInput("");
@@ -418,9 +451,14 @@ const MembersPage = () => {
     }
   };
 
-  const filteredGroups = groups.filter((group) =>
-    group.name.toLowerCase().includes(groupSearchQuery.toLowerCase())
-  );
+  const filteredGroups = groups
+    .filter((group) =>
+      group.name.toLowerCase().includes(groupSearchQuery.toLowerCase())
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
   return (
     <div className="p-8">
@@ -502,13 +540,15 @@ const MembersPage = () => {
                         className="translate-y-[2px]"
                       />
                     </TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Groups</TableHead>
                     <TableHead>
                       <Button
                         variant="ghost"
                         onClick={toggleSort}
                         className="hover:bg-transparent px-2"
                       >
-                        Email
+                        Created At
                         {sortDirection === "asc" ? (
                           <ArrowUp className="ml-2 h-4 w-4" />
                         ) : (
@@ -516,7 +556,6 @@ const MembersPage = () => {
                         )}
                       </Button>
                     </TableHead>
-                    <TableHead>Groups</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -540,6 +579,13 @@ const MembersPage = () => {
                         {member.groups && member.groups.length > 0
                           ? member.groups.map((group) => group.name).join(", ")
                           : ""}
+                      </TableCell>
+                      <TableCell>
+                        {formatInTimeZone(
+                          new Date(member.createdAt),
+                          timezone,
+                          "MMM d, yyyy h:mm a"
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -586,10 +632,12 @@ const MembersPage = () => {
                       .includes(searchQuery.toLowerCase())
                   )
                   .sort((a, b) => {
-                    const compareResult = a.email.localeCompare(b.email);
+                    const compareResult =
+                      new Date(b.createdAt).getTime() -
+                      new Date(a.createdAt).getTime();
                     return sortDirection === "asc"
-                      ? compareResult
-                      : -compareResult;
+                      ? -compareResult
+                      : compareResult;
                   });
 
                 return (
@@ -613,6 +661,14 @@ const MembersPage = () => {
                           </Button>
                           <h2 className="text-lg font-semibold">
                             {group.name} ({group.members.length})
+                            <span className="ml-4 text-sm text-muted-foreground font-normal">
+                              Created{" "}
+                              {formatInTimeZone(
+                                new Date(group.createdAt),
+                                timezone,
+                                "MMM d, yyyy h:mm a"
+                              )}
+                            </span>
                           </h2>
                         </div>
                         <div className="flex items-center gap-2">
@@ -713,13 +769,14 @@ const MembersPage = () => {
                                   className="translate-y-[2px]"
                                 />
                               </TableHead>
+                              <TableHead>Email</TableHead>
                               <TableHead>
                                 <Button
                                   variant="ghost"
                                   onClick={() => toggleGroupSort(group._id)}
                                   className="hover:bg-transparent px-2"
                                 >
-                                  Email
+                                  Created At
                                   {groupSortDirections[group._id] === "asc" ? (
                                     <ArrowUp className="ml-2 h-4 w-4" />
                                   ) : (
@@ -752,6 +809,13 @@ const MembersPage = () => {
                                   />
                                 </TableCell>
                                 <TableCell>{member.email}</TableCell>
+                                <TableCell>
+                                  {formatInTimeZone(
+                                    new Date(member.createdAt),
+                                    timezone,
+                                    "MMM d, yyyy h:mm a"
+                                  )}
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
