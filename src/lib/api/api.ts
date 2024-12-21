@@ -87,12 +87,6 @@ interface Form {
   updatedAt: string;
 }
 
-interface FormSettings {
-  isActive: boolean;
-  groups: string[];
-  members: string[];
-}
-
 interface CreateFormResponse extends Form {
   schedule: {
     type: string;

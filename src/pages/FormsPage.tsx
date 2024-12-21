@@ -18,7 +18,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import EditFormPage from "./EditFormPage";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -28,9 +27,7 @@ const FormsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formTitle, setFormTitle] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [createdForm, setCreatedForm] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {

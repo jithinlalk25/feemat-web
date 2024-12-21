@@ -207,9 +207,6 @@ const FormDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedFormSentId, setSelectedFormSentId] = useState<string | null>(
-    null
-  );
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
@@ -265,7 +262,6 @@ const FormDetailsPage = () => {
   ];
 
   const handleViewSubmissions = async (formSentId: string) => {
-    setSelectedFormSentId(formSentId);
     setIsDialogOpen(true);
     setLoadingSubmissions(true);
 

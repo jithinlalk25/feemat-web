@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowUpDown,
   ArrowDown,
   ArrowUp,
   ChevronDown,
@@ -37,7 +36,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
-import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 
 // Define the type for our data
@@ -72,7 +70,6 @@ const MembersPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [emailsInput, setEmailsInput] = useState("");
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
@@ -113,7 +110,6 @@ const MembersPage = () => {
         console.error("Failed to fetch members:", error);
         // You might want to add error handling here
       } finally {
-        setIsLoading(false);
       }
     };
 
@@ -344,7 +340,7 @@ const MembersPage = () => {
         .filter((email) => email !== "");
 
       // Create group with name and optional emails
-      const newGroup = await ApiService.createGroup(newGroupName, emails);
+      await ApiService.createGroup(newGroupName, emails);
 
       // Fetch the updated group with members
       const updatedGroups = await ApiService.getGroups();

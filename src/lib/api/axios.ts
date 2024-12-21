@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import axios, { AxiosInstance } from "axios";
 
 // Create a base axios instance with common configuration
 const axiosInstance: AxiosInstance = axios.create({
