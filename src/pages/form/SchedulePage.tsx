@@ -97,9 +97,9 @@ type MonthDay = {
   selected: boolean;
 };
 
-const monthDays: MonthDay[] = Array.from({ length: 28 }, (_, i) => ({
-  id: i + 1,
-  name: `${i + 1}`,
+const monthDays: MonthDay[] = Array.from({ length: 27 }, (_, i) => ({
+  id: i + 2,
+  name: `${i + 2}`,
   selected: i === 0,
 }));
 
