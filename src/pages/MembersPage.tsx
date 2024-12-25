@@ -27,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -99,6 +100,11 @@ const MembersPage = () => {
   const [newGroupNameInput, setNewGroupNameInput] = useState("");
   const [groupSearchQuery, setGroupSearchQuery] = useState("");
   const [timezone, setTimezone] = useState<string>("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteGroupDialogOpen, setIsDeleteGroupDialogOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<GroupWithMembers | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -166,6 +172,10 @@ const MembersPage = () => {
     );
   };
 
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
   const handleDelete = async () => {
     try {
       await ApiService.deleteMembers(selectedRows);
@@ -175,6 +185,7 @@ const MembersPage = () => {
       );
       // Clear selection
       setSelectedRows([]);
+      setIsDeleteDialogOpen(false);
       toast.success("Members deleted successfully");
     } catch (error) {
       console.error("Failed to delete members:", error);
@@ -299,19 +310,28 @@ const MembersPage = () => {
     }
   };
 
-  const handleDeleteGroup = async (groupId: string) => {
+  const handleDeleteGroupClick = (group: GroupWithMembers) => {
+    setGroupToDelete(group);
+    setIsDeleteGroupDialogOpen(true);
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!groupToDelete) return;
+
     try {
-      await ApiService.deleteGroup(groupId);
+      await ApiService.deleteGroup(groupToDelete._id);
 
       // Update local state to remove the deleted group
       setGroups((prevGroups) =>
-        prevGroups.filter((group) => group._id !== groupId)
+        prevGroups.filter((group) => group._id !== groupToDelete._id)
       );
 
       // Refresh members data to update their group associations
       const updatedMembers = await ApiService.getMembers();
       setMembers(updatedMembers);
 
+      setIsDeleteGroupDialogOpen(false);
+      setGroupToDelete(null);
       toast.success("Group deleted successfully");
     } catch (error) {
       console.error("Failed to delete group:", error);
@@ -492,350 +512,398 @@ const MembersPage = () => {
       <div>
         {activeTab === "members" ? (
           <div>
-            {/* Search input and actions */}
-            <div className="mb-4 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="relative max-w-sm">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search emails..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-                {selectedRows.length > 0 && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDelete}
-                  >
-                    Delete {selectedRows.length} selected
-                  </Button>
-                )}
+            {members.length === 0 ? (
+              <div className="text-center py-12">
+                <h3 className="text-lg font-medium text-muted-foreground mb-4">
+                  No members found
+                </h3>
+                <p className="text-sm text-muted-foreground mb-8">
+                  Get started by adding your first member
+                </p>
+                <Button onClick={handleAddMember}>Add Members</Button>
               </div>
-              <Button onClick={handleAddMember}>Add Members</Button>
-            </div>
-
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12 h-12">
-                      <Checkbox
-                        checked={
-                          filteredAndSortedMembers.length > 0 &&
-                          selectedRows.length ===
-                            filteredAndSortedMembers.length &&
-                          filteredAndSortedMembers.every((member) =>
-                            selectedRows.includes(member._id)
-                          )
-                        }
-                        onCheckedChange={toggleAll}
-                        aria-label="Select all"
-                        className="translate-y-[2px]"
+            ) : (
+              <div>
+                {/* Search input and actions */}
+                <div className="mb-4 flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <div className="relative max-w-sm">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search emails..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-8"
                       />
-                    </TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Groups</TableHead>
-                    <TableHead>
+                    </div>
+                    {selectedRows.length > 0 && (
                       <Button
-                        variant="ghost"
-                        onClick={toggleSort}
-                        className="hover:bg-transparent px-2"
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDeleteClick}
                       >
-                        Created At
-                        {sortDirection === "asc" ? (
-                          <ArrowUp className="ml-2 h-4 w-4" />
-                        ) : (
-                          <ArrowDown className="ml-2 h-4 w-4" />
-                        )}
+                        Delete {selectedRows.length} selected
                       </Button>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAndSortedMembers.map((member) => (
-                    <TableRow
-                      key={member._id}
-                      className={`${
-                        selectedRows.includes(member._id) ? "bg-muted/50" : ""
-                      }`}
-                    >
-                      <TableCell className="h-12">
-                        <Checkbox
-                          checked={selectedRows.includes(member._id)}
-                          onCheckedChange={() => toggleRow(member._id)}
-                          aria-label={`Select ${member.email}`}
-                          className="translate-y-[2px]"
-                        />
-                      </TableCell>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>
-                        {member.groups && member.groups.length > 0
-                          ? member.groups.map((group) => group.name).join(", ")
-                          : ""}
-                      </TableCell>
-                      <TableCell>
-                        {formatInTimeZone(
-                          new Date(member.createdAt),
-                          timezone,
-                          "MMM d, yyyy h:mm a"
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {filteredAndSortedMembers.length === 0 && (
-                <div className="text-center py-4 text-sm text-muted-foreground">
-                  No results found
+                    )}
+                  </div>
+                  <Button onClick={handleAddMember}>Add Members</Button>
                 </div>
-              )}
-            </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 h-12">
+                          <Checkbox
+                            checked={
+                              filteredAndSortedMembers.length > 0 &&
+                              selectedRows.length ===
+                                filteredAndSortedMembers.length &&
+                              filteredAndSortedMembers.every((member) =>
+                                selectedRows.includes(member._id)
+                              )
+                            }
+                            onCheckedChange={toggleAll}
+                            aria-label="Select all"
+                            className="translate-y-[2px]"
+                          />
+                        </TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Groups</TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            onClick={toggleSort}
+                            className="hover:bg-transparent px-2"
+                          >
+                            Created At
+                            {sortDirection === "asc" ? (
+                              <ArrowUp className="ml-2 h-4 w-4" />
+                            ) : (
+                              <ArrowDown className="ml-2 h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAndSortedMembers.map((member) => (
+                        <TableRow
+                          key={member._id}
+                          className={`${
+                            selectedRows.includes(member._id)
+                              ? "bg-muted/50"
+                              : ""
+                          }`}
+                        >
+                          <TableCell className="h-12">
+                            <Checkbox
+                              checked={selectedRows.includes(member._id)}
+                              onCheckedChange={() => toggleRow(member._id)}
+                              aria-label={`Select ${member.email}`}
+                              className="translate-y-[2px]"
+                            />
+                          </TableCell>
+                          <TableCell>{member.email}</TableCell>
+                          <TableCell>
+                            {member.groups && member.groups.length > 0
+                              ? member.groups
+                                  .map((group) => group.name)
+                                  .join(", ")
+                              : ""}
+                          </TableCell>
+                          <TableCell>
+                            {formatInTimeZone(
+                              new Date(member.createdAt),
+                              timezone,
+                              "MMM d, yyyy h:mm a"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {filteredAndSortedMembers.length === 0 && (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      No results found
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div>
-            {/* Add search input for groups */}
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div className="relative max-w-sm">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search groups..."
-                  value={groupSearchQuery}
-                  onChange={(e) => setGroupSearchQuery(e.target.value)}
-                  className="pl-8"
-                />
+            {groups.length === 0 ? (
+              <div className="text-center py-12">
+                <h3 className="text-lg font-medium text-muted-foreground mb-4">
+                  No groups found
+                </h3>
+                <p className="text-sm text-muted-foreground mb-8">
+                  Get started by creating your first group
+                </p>
+                <Button onClick={() => setIsGroupDialogOpen(true)}>
+                  Create Group
+                </Button>
               </div>
-              <Button onClick={() => setIsGroupDialogOpen(true)}>
-                Create Group
-              </Button>
-            </div>
+            ) : (
+              <div>
+                {/* Search input and actions */}
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div className="relative max-w-sm">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search groups..."
+                      value={groupSearchQuery}
+                      onChange={(e) => setGroupSearchQuery(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  <Button onClick={() => setIsGroupDialogOpen(true)}>
+                    Create Group
+                  </Button>
+                </div>
 
-            <div className="space-y-8">
-              {filteredGroups.map((group) => {
-                const isExpanded = expandedGroups[group._id] || false;
-                const sortDirection = groupSortDirections[group._id] || "asc";
-                const selectedMembers = selectedGroupMembers[group._id] || [];
-                const searchQuery = groupSearchQueries[group._id] || "";
+                <div className="space-y-8">
+                  {filteredGroups.map((group) => {
+                    const isExpanded = expandedGroups[group._id] || false;
+                    const sortDirection =
+                      groupSortDirections[group._id] || "asc";
+                    const selectedMembers =
+                      selectedGroupMembers[group._id] || [];
+                    const searchQuery = groupSearchQueries[group._id] || "";
 
-                // Filter and sort members
-                const sortedMembers = [...group.members]
-                  .filter((member) =>
-                    member.email
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase())
-                  )
-                  .sort((a, b) => {
-                    const compareResult =
-                      new Date(b.createdAt).getTime() -
-                      new Date(a.createdAt).getTime();
-                    return sortDirection === "asc"
-                      ? -compareResult
-                      : compareResult;
-                  });
+                    // Filter and sort members
+                    const sortedMembers = [...group.members]
+                      .filter((member) =>
+                        member.email
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase())
+                      )
+                      .sort((a, b) => {
+                        const compareResult =
+                          new Date(b.createdAt).getTime() -
+                          new Date(a.createdAt).getTime();
+                        return sortDirection === "asc"
+                          ? -compareResult
+                          : compareResult;
+                      });
 
-                return (
-                  <div key={group._id} className="rounded-md border">
-                    <div
-                      className="p-4 bg-muted/50 cursor-pointer"
-                      onClick={() => toggleGroupExpansion(group._id)}
-                    >
-                      <div className="flex justify-between items-center min-h-[32px]">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="p-1 h-auto"
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <h2 className="text-lg font-semibold">
-                            {group.name} ({group.members.length})
-                            <span className="ml-4 text-sm text-muted-foreground font-normal">
-                              Created{" "}
-                              {formatInTimeZone(
-                                new Date(group.createdAt),
-                                timezone,
-                                "MMM d, yyyy h:mm a"
-                              )}
-                            </span>
-                          </h2>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Open menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setGroupToRename({
-                                    id: group._id,
-                                    name: group.name,
-                                  });
-                                  setNewGroupNameInput(group.name);
-                                  setIsRenameDialogOpen(true);
-                                }}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Rename group
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => handleDeleteGroup(group._id)}
-                              >
-                                <Trash className="mr-2 h-4 w-4" />
-                                Delete group
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <>
-                        <div className="p-4 border-b">
-                          <div className="flex items-center justify-between gap-2">
+                    return (
+                      <div key={group._id} className="rounded-md border">
+                        <div
+                          className="p-4 bg-muted/50 cursor-pointer"
+                          onClick={() => toggleGroupExpansion(group._id)}
+                        >
+                          <div className="flex justify-between items-center min-h-[32px]">
                             <div className="flex items-center gap-2">
-                              <div className="relative max-w-sm">
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  placeholder="Search emails..."
-                                  value={groupSearchQueries[group._id] || ""}
-                                  onChange={(e) =>
-                                    handleGroupSearch(group._id, e.target.value)
-                                  }
-                                  className="pl-8 h-8"
-                                />
-                              </div>
-                              {selectedMembers.length > 0 && (
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleRemoveFromGroup(
-                                      group._id,
-                                      selectedMembers
-                                    )
-                                  }
-                                >
-                                  Remove {selectedMembers.length} from group
-                                </Button>
-                              )}
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedGroupId(group._id);
-                                setIsAddMembersDialogOpen(true);
-                              }}
-                            >
-                              Add Members
-                            </Button>
-                          </div>
-                        </div>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[40px] h-12">
-                                <Checkbox
-                                  checked={
-                                    sortedMembers.length > 0 &&
-                                    selectedMembers.length ===
-                                      sortedMembers.length
-                                  }
-                                  onCheckedChange={() =>
-                                    toggleAllGroupMembers(
-                                      group._id,
-                                      sortedMembers
-                                    )
-                                  }
-                                  aria-label="Select all"
-                                  className="translate-y-[2px]"
-                                />
-                              </TableHead>
-                              <TableHead>Email</TableHead>
-                              <TableHead>
-                                <Button
-                                  variant="ghost"
-                                  onClick={() => toggleGroupSort(group._id)}
-                                  className="hover:bg-transparent px-2"
-                                >
-                                  Created At
-                                  {groupSortDirections[group._id] === "asc" ? (
-                                    <ArrowUp className="ml-2 h-4 w-4" />
-                                  ) : (
-                                    <ArrowDown className="ml-2 h-4 w-4" />
-                                  )}
-                                </Button>
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {sortedMembers.map((member) => (
-                              <TableRow
-                                key={member._id}
-                                className={
-                                  selectedMembers.includes(member._id)
-                                    ? "bg-muted/50"
-                                    : ""
-                                }
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-1 h-auto"
                               >
-                                <TableCell className="w-[40px] h-12">
-                                  <Checkbox
-                                    checked={selectedMembers.includes(
-                                      member._id
-                                    )}
-                                    onCheckedChange={() =>
-                                      toggleGroupMember(group._id, member._id)
-                                    }
-                                    aria-label={`Select ${member.email}`}
-                                    className="translate-y-[2px]"
-                                  />
-                                </TableCell>
-                                <TableCell>{member.email}</TableCell>
-                                <TableCell>
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <h2 className="text-lg font-semibold">
+                                {group.name} ({group.members.length})
+                                <span className="ml-4 text-sm text-muted-foreground font-normal">
+                                  Created{" "}
                                   {formatInTimeZone(
-                                    new Date(member.createdAt),
+                                    new Date(group.createdAt),
                                     timezone,
                                     "MMM d, yyyy h:mm a"
                                   )}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                        {sortedMembers.length === 0 && (
-                          <div className="text-center py-4 text-sm text-muted-foreground">
-                            {searchQuery
-                              ? "No results found"
-                              : "No members in this group"}
+                                </span>
+                              </h2>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                    <span className="sr-only">Open menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setGroupToRename({
+                                        id: group._id,
+                                        name: group.name,
+                                      });
+                                      setNewGroupNameInput(group.name);
+                                      setIsRenameDialogOpen(true);
+                                    }}
+                                  >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Rename group
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() =>
+                                      handleDeleteGroupClick(group)
+                                    }
+                                  >
+                                    <Trash className="mr-2 h-4 w-4" />
+                                    Delete group
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
+                        </div>
+
+                        {isExpanded && (
+                          <>
+                            <div className="p-4 border-b">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="relative max-w-sm">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Search emails..."
+                                      value={
+                                        groupSearchQueries[group._id] || ""
+                                      }
+                                      onChange={(e) =>
+                                        handleGroupSearch(
+                                          group._id,
+                                          e.target.value
+                                        )
+                                      }
+                                      className="pl-8 h-8"
+                                    />
+                                  </div>
+                                  {selectedMembers.length > 0 && (
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleRemoveFromGroup(
+                                          group._id,
+                                          selectedMembers
+                                        )
+                                      }
+                                    >
+                                      Remove {selectedMembers.length} from group
+                                    </Button>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedGroupId(group._id);
+                                    setIsAddMembersDialogOpen(true);
+                                  }}
+                                >
+                                  Add Members
+                                </Button>
+                              </div>
+                            </div>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-[40px] h-12">
+                                    <Checkbox
+                                      checked={
+                                        sortedMembers.length > 0 &&
+                                        selectedMembers.length ===
+                                          sortedMembers.length
+                                      }
+                                      onCheckedChange={() =>
+                                        toggleAllGroupMembers(
+                                          group._id,
+                                          sortedMembers
+                                        )
+                                      }
+                                      aria-label="Select all"
+                                      className="translate-y-[2px]"
+                                    />
+                                  </TableHead>
+                                  <TableHead>Email</TableHead>
+                                  <TableHead>
+                                    <Button
+                                      variant="ghost"
+                                      onClick={() => toggleGroupSort(group._id)}
+                                      className="hover:bg-transparent px-2"
+                                    >
+                                      Created At
+                                      {groupSortDirections[group._id] ===
+                                      "asc" ? (
+                                        <ArrowUp className="ml-2 h-4 w-4" />
+                                      ) : (
+                                        <ArrowDown className="ml-2 h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {sortedMembers.map((member) => (
+                                  <TableRow
+                                    key={member._id}
+                                    className={
+                                      selectedMembers.includes(member._id)
+                                        ? "bg-muted/50"
+                                        : ""
+                                    }
+                                  >
+                                    <TableCell className="w-[40px] h-12">
+                                      <Checkbox
+                                        checked={selectedMembers.includes(
+                                          member._id
+                                        )}
+                                        onCheckedChange={() =>
+                                          toggleGroupMember(
+                                            group._id,
+                                            member._id
+                                          )
+                                        }
+                                        aria-label={`Select ${member.email}`}
+                                        className="translate-y-[2px]"
+                                      />
+                                    </TableCell>
+                                    <TableCell>{member.email}</TableCell>
+                                    <TableCell>
+                                      {formatInTimeZone(
+                                        new Date(member.createdAt),
+                                        timezone,
+                                        "MMM d, yyyy h:mm a"
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                            {sortedMembers.length === 0 && (
+                              <div className="text-center py-4 text-sm text-muted-foreground">
+                                {searchQuery
+                                  ? "No results found"
+                                  : "No members in this group"}
+                              </div>
+                            )}
+                          </>
                         )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-              {filteredGroups.length === 0 && (
-                <div className="text-center py-4 text-sm text-muted-foreground border rounded-md">
-                  {groups.length === 0
-                    ? "No groups found"
-                    : "No matching groups found"}
+                      </div>
+                    );
+                  })}
+                  {filteredGroups.length === 0 && (
+                    <div className="text-center py-4 text-sm text-muted-foreground border rounded-md">
+                      No matching groups found
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -955,6 +1023,59 @@ const MembersPage = () => {
           </div>
           <DialogFooter>
             <Button onClick={handleRenameGroup}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Members</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedRows.length} member
+              {selectedRows.length === 1 ? "" : "s"}? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isDeleteGroupDialogOpen}
+        onOpenChange={setIsDeleteGroupDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Group</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the group "{groupToDelete?.name}"?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteGroupDialogOpen(false);
+                setGroupToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteGroup}>
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

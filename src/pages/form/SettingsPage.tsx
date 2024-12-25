@@ -14,6 +14,13 @@ import { Input } from "@/components/ui/input";
 import ApiService from "@/lib/api/api";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Member {
   _id: string;
@@ -31,6 +38,8 @@ interface SettingsPageProps {
     _id: string;
     isActive: boolean;
     isAnonymous?: boolean;
+    expiryTime?: string;
+    reminderEmail?: boolean;
     members: {
       groupIds: string[];
       memberIds: string[];
@@ -42,6 +51,12 @@ interface SettingsPageProps {
 export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
   const [isActive, setIsActive] = useState(formData.isActive);
   const [isAnonymous, setIsAnonymous] = useState(formData.isAnonymous || false);
+  const [expiryTime, setExpiryTime] = useState(
+    formData.expiryTime || "no_expiry"
+  );
+  const [reminderEmail, setReminderEmail] = useState(
+    formData.reminderEmail || false
+  );
   const [groups, setGroups] = useState<Group[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>(
@@ -101,6 +116,8 @@ export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
       const updates = {
         isActive,
         isAnonymous,
+        expiryTime,
+        reminderEmail,
         members: {
           groupIds: selectedGroups,
           memberIds: selectedMembers,
@@ -116,6 +133,8 @@ export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
       onUpdate({
         isActive,
         isAnonymous,
+        expiryTime,
+        reminderEmail,
         members: {
           groupIds: selectedGroups,
           memberIds: selectedMembers,
@@ -168,6 +187,55 @@ export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
             : "Submissions will include member information."}
         </div>
       </div>
+
+      {/* Form Expiry Time */}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="expiry-time" className="text-base font-medium">
+            Form Expiry Time
+          </Label>
+          <Select value={expiryTime} onValueChange={setExpiryTime}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select expiry time" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="6_hours">6 hours</SelectItem>
+              <SelectItem value="12_hours">12 hours</SelectItem>
+              <SelectItem value="1_day">1 day</SelectItem>
+              <SelectItem value="3_days">3 days</SelectItem>
+              <SelectItem value="no_expiry">No expiry</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {expiryTime === "no_expiry"
+            ? "Form will remain active until manually deactivated."
+            : `Form will automatically expire ${expiryTime.replace(
+                "_",
+                " "
+              )} after being sent.`}
+        </div>
+      </div>
+
+      {/* Reminder Email Toggle */}
+      {expiryTime !== "no_expiry" && (
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <Switch
+              checked={reminderEmail}
+              onCheckedChange={setReminderEmail}
+              id="reminder-email"
+            />
+            <Label htmlFor="reminder-email" className="text-base font-medium">
+              Send reminder email
+            </Label>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            An email reminder will be sent to recipients who haven't submitted
+            their response, 1 hour before the form expires.
+          </div>
+        </div>
+      )}
 
       {/* Groups Selection */}
       <div className="space-y-3">

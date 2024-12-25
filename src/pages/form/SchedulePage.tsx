@@ -129,57 +129,24 @@ export const SchedulePage = ({ formData, onUpdate }: SchedulePageProps) => {
   const getInitialDate = () => {
     const schedule = formData.schedule;
     if (!schedule) {
-      const date = new Date();
-      date.setDate(date.getDate() + 2);
-      date.setHours(10, 0);
-      return date;
+      return undefined;
     }
 
-    if (schedule.type === "one_time") {
-      if (schedule.date && schedule.time) {
-        return new Date(`${schedule.date}T${schedule.time}`);
-      }
-      const date = new Date();
-      date.setDate(date.getDate() + 2);
-      date.setHours(10, 0);
-      return date;
-    } else if (schedule.type === "recurring") {
-      if (schedule.recurringTime) {
-        return new Date(`${schedule.recurringTime}`);
-      }
+    if (schedule.type === "one_time" && schedule.date && schedule.time) {
+      const dateTime = new Date(`${schedule.date}T${schedule.time}`);
+      return isNaN(dateTime.getTime()) ? undefined : dateTime;
     }
-    const date = new Date();
-    date.setDate(date.getDate() + 2);
-    date.setHours(10, 0);
-    return date;
+
+    return undefined;
   };
 
-  const getInitialTime = () => {
-    const schedule = formData.schedule;
-    if (!schedule) {
-      const date = new Date();
-      date.setHours(10, 0);
-      return date;
-    }
+  const [date, setDate] = useState<Date | undefined>(getInitialDate());
 
-    if (schedule.type === "recurring" && schedule.recurringTime) {
-      const [hours] = schedule.recurringTime.split(":");
-      const date = new Date();
-      date.setHours(parseInt(hours), 0);
-      return date;
-    }
-    const date = new Date();
-    date.setHours(10, 0);
-    return date;
-  };
-
-  const [date, setDate] = useState<Date | undefined>(
-    selectedSchedule === "one_time" ? getInitialDate() : undefined
-  );
-
-  const [recurringTime, setRecurringTime] = useState<Date | undefined>(
-    getInitialTime()
-  );
+  const [recurringTime, setRecurringTime] = useState<Date>(() => {
+    const now = new Date();
+    now.setHours(10, 0, 0, 0);
+    return now;
+  });
 
   const [frequency, setFrequency] = useState<"daily" | "weekly" | "monthly">(
     (formData.schedule?.frequency as "daily" | "weekly" | "monthly") || "daily"
@@ -218,8 +185,11 @@ export const SchedulePage = ({ formData, onUpdate }: SchedulePageProps) => {
   );
 
   useEffect(() => {
-    if (selectedSchedule === "one_time") {
-      setDate(getInitialDate());
+    if (selectedSchedule === "one_time" && !date) {
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 2);
+      defaultDate.setHours(10, 0, 0, 0);
+      setDate(defaultDate);
     }
   }, [selectedSchedule]);
 
@@ -234,11 +204,16 @@ export const SchedulePage = ({ formData, onUpdate }: SchedulePageProps) => {
           },
         };
       } else if (selectedSchedule === "one_time") {
+        if (!date) {
+          toast.error("Please select a date and time");
+          return;
+        }
+
         scheduleData = {
           schedule: {
             type: "one_time",
-            date: date ? format(date, "yyyy-MM-dd") : undefined,
-            time: date ? format(date, "HH:mm") : undefined,
+            date: format(date, "yyyy-MM-dd"),
+            time: format(date, "HH:mm"),
           },
         };
       } else {

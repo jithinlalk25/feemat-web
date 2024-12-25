@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import ApiService from "../../lib/api/api";
 import { Breadcrumb } from "../../components/ui/breadcrumb";
 import { Button } from "../../components/ui/button";
-import { Send, Pencil, Eye, MoreVertical } from "lucide-react";
+import { Send, Pencil, Eye, MoreVertical, Trash } from "lucide-react";
 import EditFormPage from "../EditFormPage";
 import {
   Table,
@@ -26,6 +26,7 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import {
   Bar,
   BarChart,
@@ -55,6 +56,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../../components/ui/alert-dialog";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "../../components/ui/hover-card";
 
 interface FormSent {
   _id: string;
@@ -79,6 +85,7 @@ interface FormSubmission {
     _id: string;
     email: string;
   };
+  createdAt: string;
 }
 
 interface ChartData {
@@ -202,14 +209,55 @@ const processTimeSeriesChoiceData = (
 const FormDetailsPage = () => {
   const { formId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [form, setForm] = useState<any>(null);
   const [formsSent, setFormsSent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [timezone, setTimezone] = useState<string>("");
+
+  useEffect(() => {
+    // Get timezone from localStorage or fall back to system timezone
+    const storedTimezone =
+      localStorage.getItem("timezone") ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setTimezone(storedTimezone);
+  }, []);
+
+  const canSendForm = (form: any) => {
+    // Check if form has at least one field
+    const hasFields = form.fields && form.fields.length > 0;
+
+    // Check if form has at least one member or group
+    const hasMembers =
+      form.members &&
+      ((form.members.memberIds && form.members.memberIds.length > 0) ||
+        (form.members.groupIds && form.members.groupIds.length > 0));
+
+    return hasFields && hasMembers;
+  };
+
+  const getMissingRequirements = (form: any) => {
+    const missing: string[] = [];
+
+    if (!form.fields || form.fields.length === 0) {
+      missing.push("at least one field");
+    }
+
+    if (
+      !form.members ||
+      (!form.members.memberIds?.length && !form.members.groupIds?.length)
+    ) {
+      missing.push("at least one member or group");
+    }
+
+    return missing;
+  };
 
   useEffect(() => {
     // Check if we should open the editor (when coming from form creation)
@@ -292,6 +340,19 @@ const FormDetailsPage = () => {
     }
   };
 
+  const handleDeleteForm = async () => {
+    try {
+      await ApiService.deleteForm(formId!);
+      toast.success("Form deleted successfully");
+      navigate("/dashboard/forms");
+    } catch (error) {
+      console.error("Error deleting form:", error);
+      toast.error("Failed to delete form. Please try again.");
+    } finally {
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
   const renderSubmissionsTable = () => {
     if (loadingSubmissions) {
       return <div className="py-8 text-center">Loading submissions...</div>;
@@ -318,6 +379,7 @@ const FormDetailsPage = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Respondent</TableHead>
+              <TableHead>Date</TableHead>
               {fields.map((field: any) => (
                 <TableHead key={field._id || field.id}>{field.label}</TableHead>
               ))}
@@ -336,6 +398,16 @@ const FormDetailsPage = () => {
                     {submission.isAnonymous
                       ? "Anonymous"
                       : submission.member?.email || "No email"}
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    {submission.createdAt &&
+                    !isNaN(new Date(submission.createdAt).getTime())
+                      ? formatInTimeZone(
+                          new Date(submission.createdAt),
+                          timezone,
+                          "MMM d, yyyy h:mm a"
+                        )
+                      : "N/A"}
                   </TableCell>
                   {fields.map((field: any) => {
                     const fieldId = field._id || field.id;
@@ -411,12 +483,36 @@ const FormDetailsPage = () => {
                 open={isSendDialogOpen}
                 onOpenChange={setIsSendDialogOpen}
               >
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Send className="w-4 h-4 mr-2" />
-                    Send Form Now
-                  </Button>
-                </AlertDialogTrigger>
+                <HoverCard>
+                  <HoverCardTrigger asChild>
+                    <div>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={!canSendForm(form)}
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          Send Form Now
+                        </Button>
+                      </AlertDialogTrigger>
+                    </div>
+                  </HoverCardTrigger>
+                  {!canSendForm(form) && (
+                    <HoverCardContent align="end" className="w-80">
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold">
+                          Cannot send form
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          This form requires{" "}
+                          {getMissingRequirements(form).join(" and ")} before it
+                          can be sent.
+                        </p>
+                      </div>
+                    </HoverCardContent>
+                  )}
+                </HoverCard>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Send Form</AlertDialogTitle>
@@ -444,10 +540,41 @@ const FormDetailsPage = () => {
                     <Pencil className="w-4 h-4 mr-2" />
                     Edit Form
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash className="w-4 h-4 mr-2" />
+                    Delete Form
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
+
+          <AlertDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Form</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this form? This action cannot
+                  be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteForm}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <div className="mt-8">
             <Tabs defaultValue="history">
@@ -466,34 +593,62 @@ const FormDetailsPage = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Form Sent Date</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Submission Count</TableHead>
+                        <TableHead>Expiry</TableHead>
                         <TableHead>Submissions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {formsSent.map((formSent) => (
-                        <TableRow key={formSent._id}>
-                          <TableCell>
-                            {format(
-                              new Date(formSent.createdAt),
-                              "MMM d, yyyy p"
-                            )}
-                          </TableCell>
-                          <TableCell>{formSent.submissionCount}</TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                handleViewSubmissions(formSent._id)
-                              }
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              View Submissions
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {formsSent.map((formSent) => {
+                        const now = new Date();
+                        const isExpired =
+                          formSent.expiresAt &&
+                          new Date(formSent.expiresAt) < now;
+                        const statusClass = isExpired
+                          ? "text-destructive font-medium"
+                          : "text-green-600 font-medium";
+
+                        return (
+                          <TableRow key={formSent._id}>
+                            <TableCell>
+                              {formatInTimeZone(
+                                new Date(formSent.createdAt),
+                                timezone,
+                                "MMM d, yyyy h:mm a"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className={statusClass}>
+                                {isExpired ? "Expired" : "Active"}
+                              </span>
+                            </TableCell>
+                            <TableCell>{formSent.submissionCount}</TableCell>
+                            <TableCell>
+                              {formSent.expiresAt
+                                ? formatInTimeZone(
+                                    new Date(formSent.expiresAt),
+                                    timezone,
+                                    "MMM d, yyyy h:mm a"
+                                  )
+                                : "Never"}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handleViewSubmissions(formSent._id)
+                                }
+                                disabled={formSent.submissionCount === 0}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Submissions
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                   {formsSent.length === 0 && (
@@ -506,100 +661,121 @@ const FormDetailsPage = () => {
 
               <TabsContent value="insights" className="mt-4">
                 <div className="space-y-8">
-                  {form.fields
-                    .filter((field: any) =>
+                  {formsSent.some(
+                    (formSent) => formSent.submissionCount > 0
+                  ) ? (
+                    form.fields
+                      .filter((field: any) =>
+                        ["rating", "single-choice", "multiple-choice"].includes(
+                          field.type
+                        )
+                      )
+                      .map((field: any) => {
+                        const latest10FormsSent = [...formsSent]
+                          .filter((formSent) => formSent.submissionCount > 0)
+                          .sort(
+                            (a, b) =>
+                              new Date(b.createdAt).getTime() -
+                              new Date(a.createdAt).getTime()
+                          )
+                          .slice(0, 10)
+                          .reverse();
+
+                        let chartData: TimeSeriesData[] = [];
+                        let lines: { dataKey: string; name: string }[] = [];
+
+                        if (field.type === "rating") {
+                          chartData = processTimeSeriesRatingData(
+                            latest10FormsSent,
+                            field
+                          );
+                          lines = [
+                            { dataKey: "average", name: "Average Rating" },
+                          ];
+                        } else if (
+                          ["single-choice", "multiple-choice"].includes(
+                            field.type
+                          )
+                        ) {
+                          chartData = processTimeSeriesChoiceData(
+                            latest10FormsSent,
+                            field
+                          );
+                          lines = field.options.map((opt: any) => ({
+                            dataKey: opt.value,
+                            name: opt.value,
+                          }));
+                        }
+
+                        return (
+                          <div
+                            key={field._id || field.id}
+                            className="p-4 border rounded-lg space-y-4"
+                          >
+                            <h3 className="text-lg font-semibold">
+                              {field.label}
+                            </h3>
+                            <div className="h-[300px] w-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <LineChart
+                                  data={chartData}
+                                  margin={{
+                                    left: 0,
+                                    right: 24,
+                                    top: 8,
+                                    bottom: 8,
+                                  }}
+                                >
+                                  <XAxis
+                                    dataKey="date"
+                                    stroke="#888888"
+                                    fontSize={12}
+                                    tickLine={false}
+                                    axisLine={false}
+                                  />
+                                  <YAxis
+                                    stroke="#888888"
+                                    fontSize={12}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    allowDecimals={false}
+                                  />
+                                  <Tooltip />
+                                  <Legend />
+                                  {lines.map((line, index) => (
+                                    <Line
+                                      key={line.dataKey}
+                                      type="monotone"
+                                      dataKey={line.dataKey}
+                                      name={line.name}
+                                      stroke={`hsl(${index * 60}, 70%, 50%)`}
+                                      strokeWidth={2}
+                                      dot={{ r: 4 }}
+                                    />
+                                  ))}
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        );
+                      })
+                  ) : (
+                    <div className="text-center py-8 text-sm text-muted-foreground">
+                      No insights available. Forms need to have submissions to
+                      generate insights.
+                    </div>
+                  )}
+                  {formsSent.some((formSent) => formSent.submissionCount > 0) &&
+                    form.fields.filter((field: any) =>
                       ["rating", "single-choice", "multiple-choice"].includes(
                         field.type
                       )
-                    )
-                    .map((field: any) => {
-                      const latest10FormsSent = [...formsSent]
-                        .sort(
-                          (a, b) =>
-                            new Date(b.createdAt).getTime() -
-                            new Date(a.createdAt).getTime()
-                        )
-                        .slice(0, 10)
-                        .reverse();
-
-                      let chartData: TimeSeriesData[] = [];
-                      let lines: { dataKey: string; name: string }[] = [];
-
-                      if (field.type === "rating") {
-                        chartData = processTimeSeriesRatingData(
-                          latest10FormsSent,
-                          field
-                        );
-                        lines = [
-                          { dataKey: "average", name: "Average Rating" },
-                        ];
-                      } else if (
-                        ["single-choice", "multiple-choice"].includes(
-                          field.type
-                        )
-                      ) {
-                        chartData = processTimeSeriesChoiceData(
-                          latest10FormsSent,
-                          field
-                        );
-                        lines = field.options.map((opt: any) => ({
-                          dataKey: opt.value,
-                          name: opt.value,
-                        }));
-                      }
-
-                      return (
-                        <div
-                          key={field._id || field.id}
-                          className="p-4 border rounded-lg space-y-4"
-                        >
-                          <h3 className="text-lg font-semibold">
-                            {field.label}
-                          </h3>
-                          <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <LineChart
-                                data={chartData}
-                                margin={{
-                                  left: 0,
-                                  right: 24,
-                                  top: 8,
-                                  bottom: 8,
-                                }}
-                              >
-                                <XAxis
-                                  dataKey="date"
-                                  stroke="#888888"
-                                  fontSize={12}
-                                  tickLine={false}
-                                  axisLine={false}
-                                />
-                                <YAxis
-                                  stroke="#888888"
-                                  fontSize={12}
-                                  tickLine={false}
-                                  axisLine={false}
-                                  allowDecimals={false}
-                                />
-                                <Tooltip />
-                                <Legend />
-                                {lines.map((line, index) => (
-                                  <Line
-                                    key={line.dataKey}
-                                    type="monotone"
-                                    dataKey={line.dataKey}
-                                    name={line.name}
-                                    stroke={`hsl(${index * 60}, 70%, 50%)`}
-                                    strokeWidth={2}
-                                    dot={{ r: 4 }}
-                                  />
-                                ))}
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    ).length === 0 && (
+                      <div className="text-center py-8 text-sm text-muted-foreground">
+                        No insights available. Add rating or choice questions to
+                        see insights.
+                      </div>
+                    )}
                 </div>
               </TabsContent>
             </Tabs>
@@ -695,6 +871,16 @@ const FormDetailsPage = () => {
                       </div>
                     );
                   })}
+                {form.fields.filter((field: any) =>
+                  ["rating", "single-choice", "multiple-choice"].includes(
+                    field.type
+                  )
+                ).length === 0 && (
+                  <div className="w-full text-center py-8 text-sm text-muted-foreground">
+                    No insights available. Add rating or choice questions to see
+                    insights.
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>

@@ -324,6 +324,12 @@ class ApiService {
   static async sendForm(formId: string): Promise<any> {
     return this.post(`${API_ENDPOINTS.FORMS.SEND(formId)}`, {});
   }
+
+  static async deleteForm(
+    formId: string
+  ): Promise<{ message: string; deletedFormId: string }> {
+    return this.delete(`${API_ENDPOINTS.FORMS.DELETE(formId)}`);
+  }
 }
 
 export default ApiService;

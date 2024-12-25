@@ -30,7 +30,7 @@ export function HomePage() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-8">
       <Card className="w-[400px]">
         <CardHeader>
           <h1 className="text-2xl font-bold text-black text-center mb-4">
@@ -71,6 +71,40 @@ export function HomePage() {
           )}
         </CardContent>
       </Card>
+      <SupportContact />
+    </div>
+  );
+}
+
+function SupportContact() {
+  return (
+    <div className="mt-6 text-center text-sm text-gray-600">
+      <p>Having trouble? Contact our support</p>
+      <p className="mt-1">
+        <a
+          href="mailto:support@feemat.com"
+          className="text-blue-500 hover:underline"
+        >
+          support@feemat.com
+        </a>
+      </p>
+      <div className="mt-1 flex items-center justify-center gap-3">
+        <a
+          href="tel:+917356245819"
+          className="text-blue-500 hover:underline flex items-center gap-1"
+        >
+          <span>📞</span> Call
+        </a>
+        <span className="text-gray-400">|</span>
+        <a
+          href="https://wa.me/917356245819"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:underline flex items-center gap-1"
+        >
+          <span>💬</span> WhatsApp
+        </a>
+      </div>
     </div>
   );
 }
@@ -153,6 +187,7 @@ function SignUpForm({
 }) {
   const [selectedTimezone, setSelectedTimezone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -251,13 +286,26 @@ function SignUpForm({
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">Confirm Password</Label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          placeholder="Re-enter your password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
+        <div className="relative">
+          <Input
+            id="confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            placeholder="Re-enter your password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2"
+          >
+            {showConfirmPassword ? (
+              <EyeOff className="h-4 w-4 text-gray-500" />
+            ) : (
+              <Eye className="h-4 w-4 text-gray-500" />
+            )}
+          </button>
+        </div>
         {passwordError && (
           <p className="text-sm text-red-500 mt-1">{passwordError}</p>
         )}

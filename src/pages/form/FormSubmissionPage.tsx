@@ -44,6 +44,10 @@ export default function FormSubmissionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isExpired, setIsExpired] = useState(false);
+  const [alreadySubmittedEmail, setAlreadySubmittedEmail] = useState<
+    string | null
+  >(null);
 
   // Create a dynamic form schema based on the form fields
   const createFormSchema = (fields: FormField[]) => {
@@ -108,8 +112,20 @@ export default function FormSubmissionPage() {
             options: field.options,
           })),
         });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch form");
+      } catch (err: any) {
+        if (
+          err?.response?.status === 400 &&
+          err?.response?.data?.code === "FORM_LINK_EXPIRED"
+        ) {
+          setIsExpired(true);
+        } else if (
+          err?.response?.status === 400 &&
+          err?.response?.data?.code === "FORM_ALREADY_SUBMITTED"
+        ) {
+          setAlreadySubmittedEmail(err?.response?.data?.memberEmail);
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to fetch form");
+        }
       } finally {
         setLoading(false);
       }
@@ -154,6 +170,76 @@ export default function FormSubmissionPage() {
       // You might want to show an error message to the user here
     }
   };
+
+  if (alreadySubmittedEmail) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <Card className="shadow-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center gap-4 py-12">
+              <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                <span className="text-yellow-600 text-xl">!</span>
+              </div>
+              <div className="text-center">
+                <h2 className="text-xl font-semibold">
+                  Form Already Submitted
+                </h2>
+                <p className="text-gray-500 mt-2">
+                  This form has already been submitted by{" "}
+                  <span className="font-medium">{alreadySubmittedEmail}</span>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="text-center mt-4 text-sm text-gray-500">
+          Powered by{" "}
+          <a
+            href="https://feemat.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold hover:underline"
+          >
+            Feemat
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (isExpired) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <Card className="shadow-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center gap-4 py-12">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="text-red-600 text-xl">!</span>
+              </div>
+              <div className="text-center">
+                <h2 className="text-xl font-semibold">Form Link Expired</h2>
+                <p className="text-gray-500 mt-2">
+                  This form link has expired and is no longer accepting
+                  responses.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="text-center mt-4 text-sm text-gray-500">
+          Powered by{" "}
+          <a
+            href="https://feemat.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold hover:underline"
+          >
+            Feemat
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div>Loading...</div>;
@@ -345,7 +431,15 @@ export default function FormSubmissionPage() {
           </CardContent>
         </Card>
         <div className="text-center mt-4 text-sm text-gray-500">
-          Powered by <span className="font-semibold">Feemat</span>
+          Powered by{" "}
+          <a
+            href="https://feemat.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold hover:underline"
+          >
+            Feemat
+          </a>
         </div>
       </div>
     );
@@ -412,7 +506,15 @@ export default function FormSubmissionPage() {
         </CardContent>
       </Card>
       <div className="text-center mt-4 text-sm text-gray-500">
-        Powered by <span className="font-semibold">Feemat</span>
+        Powered by{" "}
+        <a
+          href="https://feemat.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold hover:underline"
+        >
+          Feemat
+        </a>
       </div>
     </div>
   );

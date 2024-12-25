@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
     SUBMISSIONS: (formSentId: string) =>
       `/forms/sent/${formSentId}/submissions`,
     SEND: (formId: string) => `/forms/${formId}/send`,
+    DELETE: (formId: string) => `/forms/${formId}`,
   },
   OVERVIEW: {
     STATS: "/overview",
