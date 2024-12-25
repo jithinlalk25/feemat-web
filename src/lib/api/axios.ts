@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from "axios";
 
 // Create a base axios instance with common configuration
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: process.env.VITE_API_BASE_URL || "http://localhost:3000/api", // adjust the default as needed
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api", // adjust the default as needed
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
