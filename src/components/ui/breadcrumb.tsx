@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 export interface BreadcrumbItem {
   href: string;
   label: string;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 interface BreadcrumbProps {
@@ -24,6 +25,7 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
             className={`hover:text-foreground ${
               index === items.length - 1 ? "text-foreground font-semibold" : ""
             }`}
+            onClick={item.onClick}
           >
             {item.label}
           </Link>

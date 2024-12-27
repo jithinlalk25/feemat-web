@@ -38,6 +38,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 // Define the type for our data
 interface Member {
@@ -105,21 +110,24 @@ const MembersPage = () => {
   const [groupToDelete, setGroupToDelete] = useState<GroupWithMembers | null>(
     null
   );
+  const [subscription, setSubscription] = useState<any>(null);
 
   useEffect(() => {
-    const fetchMembers = async () => {
+    const fetchData = async () => {
       try {
-        const data = await ApiService.getMembers();
-        console.log(data);
-        setMembers(data);
+        const [membersData, subscriptionData] = await Promise.all([
+          ApiService.getMembers(),
+          ApiService.getMySubscription(),
+        ]);
+        setMembers(membersData);
+        setSubscription(subscriptionData);
       } catch (error) {
-        console.error("Failed to fetch members:", error);
-        // You might want to add error handling here
-      } finally {
+        console.error("Failed to fetch data:", error);
+        toast.error("Failed to fetch data");
       }
     };
 
-    fetchMembers();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -480,6 +488,11 @@ const MembersPage = () => {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Members</h1>
+        {subscription && (
+          <div className="text-sm text-muted-foreground">
+            Members created: {members.length} / {subscription.maxMembers}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -520,7 +533,34 @@ const MembersPage = () => {
                 <p className="text-sm text-muted-foreground mb-8">
                   Get started by adding your first member
                 </p>
-                <Button onClick={handleAddMember}>Add Members</Button>
+                <HoverCard>
+                  <HoverCardTrigger>
+                    <Button
+                      onClick={handleAddMember}
+                      disabled={
+                        subscription &&
+                        members.length >= subscription.maxMembers
+                      }
+                    >
+                      Add Members
+                    </Button>
+                  </HoverCardTrigger>
+                  {subscription &&
+                    members.length >= subscription.maxMembers && (
+                      <HoverCardContent className="w-80">
+                        <div className="flex flex-col gap-2">
+                          <p className="text-sm font-semibold">
+                            Member Limit Reached
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            You have reached the maximum number of members
+                            allowed in your current subscription plan. Please
+                            upgrade your plan to add more members.
+                          </p>
+                        </div>
+                      </HoverCardContent>
+                    )}
+                </HoverCard>
               </div>
             ) : (
               <div>
@@ -546,7 +586,34 @@ const MembersPage = () => {
                       </Button>
                     )}
                   </div>
-                  <Button onClick={handleAddMember}>Add Members</Button>
+                  <HoverCard>
+                    <HoverCardTrigger>
+                      <Button
+                        onClick={handleAddMember}
+                        disabled={
+                          subscription &&
+                          members.length >= subscription.maxMembers
+                        }
+                      >
+                        Add Members
+                      </Button>
+                    </HoverCardTrigger>
+                    {subscription &&
+                      members.length >= subscription.maxMembers && (
+                        <HoverCardContent className="w-80">
+                          <div className="flex flex-col gap-2">
+                            <p className="text-sm font-semibold">
+                              Member Limit Reached
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              You have reached the maximum number of members
+                              allowed in your current subscription plan. Please
+                              upgrade your plan to add more members.
+                            </p>
+                          </div>
+                        </HoverCardContent>
+                      )}
+                  </HoverCard>
                 </div>
 
                 <div className="rounded-md border">

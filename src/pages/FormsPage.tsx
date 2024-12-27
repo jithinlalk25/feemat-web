@@ -18,6 +18,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { useNavigate } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -29,21 +34,26 @@ const FormsPage = () => {
   const [formTitle, setFormTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [timezone, setTimezone] = useState<string>("");
+  const [subscription, setSubscription] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchForms = async () => {
+    const fetchData = async () => {
       try {
-        const formsData = await ApiService.getForms();
+        const [formsData, subscriptionData] = await Promise.all([
+          ApiService.getForms(),
+          ApiService.getMySubscription(),
+        ]);
         setForms(formsData);
+        setSubscription(subscriptionData);
       } catch (error) {
-        console.error("Error fetching forms:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchForms();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -88,7 +98,14 @@ const FormsPage = () => {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-semibold mb-6">Forms</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Forms</h1>
+        {subscription && (
+          <div className="text-sm text-muted-foreground">
+            Forms created: {forms.length} / {subscription.maxForms}
+          </div>
+        )}
+      </div>
 
       {forms.length === 0 ? (
         <div className="text-center py-12">
@@ -98,7 +115,28 @@ const FormsPage = () => {
           <p className="text-sm text-muted-foreground mb-8">
             Get started by creating your first form
           </p>
-          <Button onClick={() => setIsDialogOpen(true)}>Create Form</Button>
+          <HoverCard>
+            <HoverCardTrigger>
+              <Button
+                onClick={() => setIsDialogOpen(true)}
+                disabled={subscription && forms.length >= subscription.maxForms}
+              >
+                Create Form
+              </Button>
+            </HoverCardTrigger>
+            {subscription && forms.length >= subscription.maxForms && (
+              <HoverCardContent className="w-80">
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-semibold">Form Limit Reached</p>
+                  <p className="text-sm text-muted-foreground">
+                    You have reached the maximum number of forms allowed in your
+                    current subscription plan. Please upgrade your plan to
+                    create more forms.
+                  </p>
+                </div>
+              </HoverCardContent>
+            )}
+          </HoverCard>
         </div>
       ) : (
         <>
@@ -113,7 +151,30 @@ const FormsPage = () => {
                 className="pl-8"
               />
             </div>
-            <Button onClick={() => setIsDialogOpen(true)}>Create Form</Button>
+            <HoverCard>
+              <HoverCardTrigger>
+                <Button
+                  onClick={() => setIsDialogOpen(true)}
+                  disabled={
+                    subscription && forms.length >= subscription.maxForms
+                  }
+                >
+                  Create Form
+                </Button>
+              </HoverCardTrigger>
+              {subscription && forms.length >= subscription.maxForms && (
+                <HoverCardContent className="w-80">
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-semibold">Form Limit Reached</p>
+                    <p className="text-sm text-muted-foreground">
+                      You have reached the maximum number of forms allowed in
+                      your current subscription plan. Please upgrade your plan
+                      to create more forms.
+                    </p>
+                  </div>
+                </HoverCardContent>
+              )}
+            </HoverCard>
           </div>
 
           <Table>

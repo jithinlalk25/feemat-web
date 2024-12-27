@@ -305,8 +305,17 @@ const FormDetailsPage = () => {
     { href: "/dashboard/forms", label: "Forms" },
     {
       href: `/dashboard/forms/${formId}`,
-      label: isEditing ? "Edit" : "Details",
+      label: "Details",
+      onClick: (e: React.MouseEvent) => {
+        if (isEditing) {
+          e.preventDefault();
+          setIsEditing(false);
+        }
+      },
     },
+    ...(isEditing
+      ? [{ href: `/dashboard/forms/${formId}`, label: "Edit" }]
+      : []),
   ];
 
   const handleViewSubmissions = async (formSentId: string) => {

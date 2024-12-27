@@ -47,7 +47,9 @@ const SubscriptionPage = () => {
 
       <Card className="mb-6 max-w-md">
         <CardHeader>
-          <CardTitle>Current Plan: {subscription?.plan || "Free"}</CardTitle>
+          <CardTitle className="text-lg">
+            Current Plan: {subscription?.plan || "Free"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -64,7 +66,11 @@ const SubscriptionPage = () => {
                 <li className="flex items-center text-gray-700">
                   <span className="font-medium mr-2">Expires:</span>
                   <span>
-                    {new Date(subscription.expiry).toLocaleDateString()}
+                    {new Date(subscription.expiry).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </span>
                 </li>
               )}
@@ -78,7 +84,7 @@ const SubscriptionPage = () => {
           To upgrade your subscription, please{" "}
           <Link
             to="/dashboard/support"
-            className="text-blue-600 hover:underline font-medium"
+            className="text-blue-600 underline hover:no-underline font-medium"
           >
             contact our support team
           </Link>
