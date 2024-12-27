@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import ApiService from "@/lib/api/api";
 import { Link } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 const SubscriptionPage = () => {
   const [subscription, setSubscription] = useState<{
@@ -30,9 +31,11 @@ const SubscriptionPage = () => {
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Subscription</h1>
-          <p className="text-gray-500">Loading subscription details...</p>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Loading subscription details...
+          </p>
         </div>
       </div>
     );

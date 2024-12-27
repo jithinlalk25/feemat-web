@@ -67,6 +67,7 @@ export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
   );
   const [searchGroups, setSearchGroups] = useState("");
   const [searchMembers, setSearchMembers] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,6 +114,7 @@ export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
 
   const handleSaveSettings = async () => {
     try {
+      setIsSaving(true);
       const updates = {
         isActive,
         isAnonymous,
@@ -124,11 +126,10 @@ export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
         },
       };
 
-      await toast.promise(ApiService.updateForm(formData._id, updates), {
-        loading: "Saving settings...",
-        success: "Settings saved successfully",
-        error: "Failed to save settings",
-      });
+      const loadingToast = toast.loading("Saving settings...");
+      await ApiService.updateForm(formData._id, updates);
+      toast.dismiss(loadingToast);
+      toast.success("Settings saved successfully");
 
       onUpdate({
         isActive,
@@ -142,6 +143,9 @@ export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
       });
     } catch (error) {
       console.error("Error saving settings:", error);
+      toast.error("Failed to save settings");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -404,7 +408,9 @@ export const SettingsPage = ({ formData, onUpdate }: SettingsPageProps) => {
       </div>
 
       <div className="flex justify-start pt-4">
-        <Button onClick={handleSaveSettings}>Save Settings</Button>
+        <Button onClick={handleSaveSettings} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save Settings"}
+        </Button>
       </div>
     </div>
   );

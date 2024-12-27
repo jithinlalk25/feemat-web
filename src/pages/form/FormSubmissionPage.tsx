@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/ui/star-rating";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 interface FormField {
   id: string;
@@ -48,6 +48,7 @@ export default function FormSubmissionPage() {
   const [alreadySubmittedEmail, setAlreadySubmittedEmail] = useState<
     string | null
   >(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Create a dynamic form schema based on the form fields
   const createFormSchema = (fields: FormField[]) => {
@@ -139,6 +140,7 @@ export default function FormSubmissionPage() {
   ) => {
     if (!formData || !linkId) return;
 
+    setSubmitting(true);
     try {
       // Transform the values into the required format
       const transformedData = Object.entries(values).reduce(
@@ -168,6 +170,8 @@ export default function FormSubmissionPage() {
     } catch (err) {
       console.error("Failed to submit form:", err);
       // You might want to show an error message to the user here
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -242,7 +246,29 @@ export default function FormSubmissionPage() {
   }
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <Card className="shadow-lg">
+          <CardContent>
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Loading form...</p>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="text-center mt-4 text-sm text-gray-500">
+          Powered by{" "}
+          <a
+            href="https://feemat.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold hover:underline"
+          >
+            Feemat
+          </a>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -497,9 +523,16 @@ export default function FormSubmissionPage() {
                 type="submit"
                 size="lg"
                 className="mt-6"
-                disabled={!form.formState.isValid}
+                disabled={!form.formState.isValid || submitting}
               >
-                Submit
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit"
+                )}
               </Button>
             </form>
           </Form>

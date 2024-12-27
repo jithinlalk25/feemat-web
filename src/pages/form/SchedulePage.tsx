@@ -184,6 +184,8 @@ export const SchedulePage = ({ formData, onUpdate }: SchedulePageProps) => {
     }))
   );
 
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     if (selectedSchedule === "one_time" && !date) {
       const defaultDate = new Date();
@@ -195,6 +197,7 @@ export const SchedulePage = ({ formData, onUpdate }: SchedulePageProps) => {
 
   const handleSaveSchedule = async () => {
     try {
+      setIsSaving(true);
       let scheduleData;
 
       if (selectedSchedule === "no_schedule") {
@@ -254,16 +257,18 @@ export const SchedulePage = ({ formData, onUpdate }: SchedulePageProps) => {
         };
       }
 
-      await toast.promise(ApiService.updateForm(formData._id, scheduleData), {
-        loading: "Saving schedule...",
-        success: "Schedule saved successfully",
-        error: "Failed to save schedule",
-      });
+      const loadingToast = toast.loading("Saving schedule...");
+      await ApiService.updateForm(formData._id, scheduleData);
+      toast.dismiss(loadingToast);
+      toast.success("Schedule saved successfully");
 
       // Pass the complete schedule data to parent
       onUpdate(scheduleData);
     } catch (error) {
       console.error("Error saving schedule:", error);
+      toast.error("Failed to save schedule");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -517,7 +522,9 @@ export const SchedulePage = ({ formData, onUpdate }: SchedulePageProps) => {
       )}
 
       <div className="pt-4">
-        <Button onClick={handleSaveSchedule}>Save Schedule</Button>
+        <Button onClick={handleSaveSchedule} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save Schedule"}
+        </Button>
       </div>
     </div>
   );

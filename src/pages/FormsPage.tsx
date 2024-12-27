@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +35,7 @@ const FormsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [timezone, setTimezone] = useState<string>("");
   const [subscription, setSubscription] = useState<any>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -73,14 +74,18 @@ const FormsPage = () => {
 
     try {
       setError(null);
+      setIsCreating(true);
       const response = await ApiService.createForm(formTitle);
       setIsDialogOpen(false);
+      setFormTitle("");
       navigate(`/dashboard/forms/${response._id}`, {
         state: { openEditor: true },
       });
     } catch (error) {
       console.error("Error creating form:", error);
       setError("Failed to create form. Please try again.");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -91,7 +96,10 @@ const FormsPage = () => {
   if (loading) {
     return (
       <div className="p-8">
-        <p>Loading...</p>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading forms...</p>
+        </div>
       </div>
     );
   }
@@ -270,10 +278,13 @@ const FormsPage = () => {
                 setFormTitle("");
                 setError(null);
               }}
+              disabled={isCreating}
             >
               Cancel
             </Button>
-            <Button onClick={handleCreateForm}>Next</Button>
+            <Button onClick={handleCreateForm} disabled={isCreating}>
+              {isCreating ? "Creating..." : "Next"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

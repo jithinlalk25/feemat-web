@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import ApiService from "@/lib/api/api";
 import { Link } from "react-router-dom";
 import { DocumentTextIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { Loader2 } from "lucide-react";
 
 export function OverviewPage() {
   const [stats, setStats] = useState<{
@@ -40,7 +41,10 @@ export function OverviewPage() {
       <h1 className="text-2xl font-semibold mb-6">Overview</h1>
 
       {loading ? (
-        <div>Loading...</div>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading overview...</p>
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

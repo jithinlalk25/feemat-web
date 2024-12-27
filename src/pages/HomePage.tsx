@@ -191,8 +191,66 @@ function SignUpForm({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const validatePassword = (pass: string) => {
+    const minLength = pass.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(pass);
+    const hasLowerCase = /[a-z]/.test(pass);
+    const hasNumber = /[0-9]/.test(pass);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
+
+    return {
+      isValid:
+        minLength &&
+        hasUpperCase &&
+        hasLowerCase &&
+        hasNumber &&
+        hasSpecialChar,
+      requirements: {
+        minLength,
+        hasUpperCase,
+        hasLowerCase,
+        hasNumber,
+        hasSpecialChar,
+      },
+    };
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    const validation = validatePassword(newPassword);
+    if (!validation.isValid) {
+      const errors = [];
+      if (!validation.requirements.minLength)
+        errors.push("at least 8 characters");
+      if (!validation.requirements.hasUpperCase)
+        errors.push("one uppercase letter");
+      if (!validation.requirements.hasLowerCase)
+        errors.push("one lowercase letter");
+      if (!validation.requirements.hasNumber) errors.push("one number");
+      if (!validation.requirements.hasSpecialChar)
+        errors.push("one special character");
+      setPasswordError(`Password must contain ${errors.join(", ")}`);
+    } else {
+      setPasswordError("");
+    }
+  };
+
+  const handleConfirmPasswordChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+    setConfirmPassword(value);
+    if (value !== password) {
+      setConfirmPasswordError("Passwords do not match");
+    } else {
+      setConfirmPasswordError("");
+    }
+  };
 
   useEffect(() => {
     // Get user's timezone using Intl.DateTimeFormat
@@ -221,10 +279,17 @@ function SignUpForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError("");
+    setConfirmPasswordError("");
     setError("");
 
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      setPasswordError("Password does not meet requirements");
+      return;
+    }
+
     if (password !== confirmPassword) {
-      setPasswordError("Passwords do not match");
+      setConfirmPasswordError("Passwords do not match");
       return;
     }
 
@@ -259,7 +324,12 @@ function SignUpForm({
       {error && <p className="text-sm text-red-500 text-center">{error}</p>}
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" placeholder="Enter your email" />
+        <Input
+          id="email"
+          type="email"
+          placeholder="Enter your email"
+          required
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
@@ -269,7 +339,8 @@ function SignUpForm({
             type={showPassword ? "text" : "password"}
             placeholder="Enter your password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={handlePasswordChange}
+            required
           />
           <button
             type="button"
@@ -283,6 +354,13 @@ function SignUpForm({
             )}
           </button>
         </div>
+        {passwordError && (
+          <p className="text-sm text-red-500 mt-1">{passwordError}</p>
+        )}
+        <p className="text-xs text-gray-500 mt-1">
+          Password must contain at least 8 characters, one uppercase letter, one
+          lowercase letter, one number, and one special character.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -292,7 +370,8 @@ function SignUpForm({
             type={showConfirmPassword ? "text" : "password"}
             placeholder="Re-enter your password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={handleConfirmPasswordChange}
+            required
           />
           <button
             type="button"
@@ -306,8 +385,8 @@ function SignUpForm({
             )}
           </button>
         </div>
-        {passwordError && (
-          <p className="text-sm text-red-500 mt-1">{passwordError}</p>
+        {confirmPasswordError && (
+          <p className="text-sm text-red-500 mt-1">{confirmPasswordError}</p>
         )}
       </div>
       <div className="space-y-2">

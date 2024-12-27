@@ -38,6 +38,7 @@ export const FieldsPage = ({ formData, onUpdate }: FieldsPageProps) => {
   const [fields, setFields] = useState<FormField[]>(formData.fields || []);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -109,6 +110,7 @@ export const FieldsPage = ({ formData, onUpdate }: FieldsPageProps) => {
 
   const handleSaveFields = async () => {
     try {
+      setIsSaving(true);
       const apiFields = fields.map((field) => ({
         id: field.id,
         label: field.label,
@@ -119,16 +121,17 @@ export const FieldsPage = ({ formData, onUpdate }: FieldsPageProps) => {
 
       const updates = { fields: apiFields };
 
-      await toast.promise(ApiService.updateForm(formData._id, updates), {
-        loading: "Saving fields...",
-        success: "Fields saved successfully",
-        error: "Failed to save fields",
-      });
+      const loadingToast = toast.loading("Saving fields...");
+      await ApiService.updateForm(formData._id, updates);
+      toast.dismiss(loadingToast);
+      toast.success("Fields saved successfully");
 
       onUpdate({ fields: apiFields });
     } catch (error) {
       console.error("Error saving fields:", error);
       toast.error("Failed to save fields");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -379,8 +382,12 @@ export const FieldsPage = ({ formData, onUpdate }: FieldsPageProps) => {
         </div>
 
         {fields.length > 0 && (
-          <Button onClick={handleSaveFields} variant="default">
-            Save Fields
+          <Button
+            onClick={handleSaveFields}
+            variant="default"
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving..." : "Save Fields"}
           </Button>
         )}
       </div>
