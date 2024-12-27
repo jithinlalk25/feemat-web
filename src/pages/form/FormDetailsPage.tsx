@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import ApiService from "../../lib/api/api";
 import { Breadcrumb } from "../../components/ui/breadcrumb";
 import { Button } from "../../components/ui/button";
-import { Send, Pencil, Eye, MoreVertical, Trash } from "lucide-react";
+import { Send, Pencil, Eye, MoreVertical, Trash, Loader2 } from "lucide-react";
 import EditFormPage from "../EditFormPage";
 import {
   Table,
@@ -220,6 +220,7 @@ const FormDetailsPage = () => {
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [timezone, setTimezone] = useState<string>("");
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     // Get timezone from localStorage or fall back to system timezone
@@ -335,17 +336,19 @@ const FormDetailsPage = () => {
   };
 
   const handleSendForm = async () => {
+    setIsSending(true);
     try {
       await ApiService.sendForm(formId!);
       // Refresh the forms sent list
       const formsSentData = await ApiService.getFormsSent(formId!);
       setFormsSent(formsSentData);
       toast.success("Form has been sent successfully");
+      setIsSendDialogOpen(false);
     } catch (error) {
       console.error("Error sending form:", error);
       toast.error("Failed to send form. Please try again.");
     } finally {
-      setIsSendDialogOpen(false);
+      setIsSending(false);
     }
   };
 
@@ -490,7 +493,11 @@ const FormDetailsPage = () => {
             <div className="flex items-center gap-2">
               <AlertDialog
                 open={isSendDialogOpen}
-                onOpenChange={setIsSendDialogOpen}
+                onOpenChange={(open) => {
+                  if (!isSending) {
+                    setIsSendDialogOpen(open);
+                  }
+                }}
               >
                 <HoverCard>
                   <HoverCardTrigger asChild>
@@ -531,9 +538,24 @@ const FormDetailsPage = () => {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleSendForm}>
-                      Send
+                    <AlertDialogCancel disabled={isSending}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSendForm();
+                      }}
+                      disabled={isSending}
+                    >
+                      {isSending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send"
+                      )}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -609,55 +631,61 @@ const FormDetailsPage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {formsSent.map((formSent) => {
-                        const now = new Date();
-                        const isExpired =
-                          formSent.expiresAt &&
-                          new Date(formSent.expiresAt) < now;
-                        const statusClass = isExpired
-                          ? "text-destructive font-medium"
-                          : "text-green-600 font-medium";
+                      {[...formsSent]
+                        .sort(
+                          (a, b) =>
+                            new Date(b.createdAt).getTime() -
+                            new Date(a.createdAt).getTime()
+                        )
+                        .map((formSent) => {
+                          const now = new Date();
+                          const isExpired =
+                            formSent.expiresAt &&
+                            new Date(formSent.expiresAt) < now;
+                          const statusClass = isExpired
+                            ? "text-destructive font-medium"
+                            : "text-green-600 font-medium";
 
-                        return (
-                          <TableRow key={formSent._id}>
-                            <TableCell>
-                              {formatInTimeZone(
-                                new Date(formSent.createdAt),
-                                timezone,
-                                "MMM d, yyyy h:mm a"
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span className={statusClass}>
-                                {isExpired ? "Expired" : "Active"}
-                              </span>
-                            </TableCell>
-                            <TableCell>{formSent.submissionCount}</TableCell>
-                            <TableCell>
-                              {formSent.expiresAt
-                                ? formatInTimeZone(
-                                    new Date(formSent.expiresAt),
-                                    timezone,
-                                    "MMM d, yyyy h:mm a"
-                                  )
-                                : "Never"}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleViewSubmissions(formSent._id)
-                                }
-                                disabled={formSent.submissionCount === 0}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Submissions
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                          return (
+                            <TableRow key={formSent._id}>
+                              <TableCell>
+                                {formatInTimeZone(
+                                  new Date(formSent.createdAt),
+                                  timezone,
+                                  "MMM d, yyyy h:mm a"
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span className={statusClass}>
+                                  {isExpired ? "Expired" : "Active"}
+                                </span>
+                              </TableCell>
+                              <TableCell>{formSent.submissionCount}</TableCell>
+                              <TableCell>
+                                {formSent.expiresAt
+                                  ? formatInTimeZone(
+                                      new Date(formSent.expiresAt),
+                                      timezone,
+                                      "MMM d, yyyy h:mm a"
+                                    )
+                                  : "Never"}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleViewSubmissions(formSent._id)
+                                  }
+                                  disabled={formSent.submissionCount === 0}
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Submissions
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                     </TableBody>
                   </Table>
                   {formsSent.length === 0 && (
@@ -673,50 +701,110 @@ const FormDetailsPage = () => {
                   {formsSent.some(
                     (formSent) => formSent.submissionCount > 0
                   ) ? (
-                    form.fields
-                      .filter((field: any) =>
-                        ["rating", "single-choice", "multiple-choice"].includes(
-                          field.type
+                    <>
+                      {/* Chart Fields Section */}
+                      {form.fields
+                        .filter((field: any) =>
+                          [
+                            "rating",
+                            "single-choice",
+                            "multiple-choice",
+                          ].includes(field.type)
                         )
-                      )
-                      .map((field: any) => {
-                        const latest10FormsSent = [...formsSent]
-                          .filter((formSent) => formSent.submissionCount > 0)
-                          .sort(
-                            (a, b) =>
-                              new Date(b.createdAt).getTime() -
-                              new Date(a.createdAt).getTime()
-                          )
-                          .slice(0, 10)
-                          .reverse();
+                        .map((field: any) => {
+                          const latest10FormsSent = [...formsSent]
+                            .filter((formSent) => formSent.submissionCount > 0)
+                            .sort(
+                              (a, b) =>
+                                new Date(b.createdAt).getTime() -
+                                new Date(a.createdAt).getTime()
+                            )
+                            .slice(0, 10)
+                            .reverse();
 
-                        let chartData: TimeSeriesData[] = [];
-                        let lines: { dataKey: string; name: string }[] = [];
+                          let chartData: TimeSeriesData[] = [];
+                          let lines: { dataKey: string; name: string }[] = [];
 
-                        if (field.type === "rating") {
-                          chartData = processTimeSeriesRatingData(
-                            latest10FormsSent,
-                            field
+                          if (field.type === "rating") {
+                            chartData = processTimeSeriesRatingData(
+                              latest10FormsSent,
+                              field
+                            );
+                            lines = [
+                              { dataKey: "average", name: "Average Rating" },
+                            ];
+                          } else if (
+                            ["single-choice", "multiple-choice"].includes(
+                              field.type
+                            )
+                          ) {
+                            chartData = processTimeSeriesChoiceData(
+                              latest10FormsSent,
+                              field
+                            );
+                            lines = field.options.map((opt: any) => ({
+                              dataKey: opt.value,
+                              name: opt.value,
+                            }));
+                          }
+
+                          return (
+                            <div
+                              key={field._id || field.id}
+                              className="p-4 border rounded-lg space-y-4"
+                            >
+                              <h3 className="text-lg font-semibold">
+                                {field.label}
+                              </h3>
+                              <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <LineChart
+                                    data={chartData}
+                                    margin={{
+                                      left: 0,
+                                      right: 24,
+                                      top: 8,
+                                      bottom: 8,
+                                    }}
+                                  >
+                                    <XAxis
+                                      dataKey="date"
+                                      stroke="#888888"
+                                      fontSize={12}
+                                      tickLine={false}
+                                      axisLine={false}
+                                    />
+                                    <YAxis
+                                      stroke="#888888"
+                                      fontSize={12}
+                                      tickLine={false}
+                                      axisLine={false}
+                                      allowDecimals={false}
+                                    />
+                                    <Tooltip />
+                                    <Legend />
+                                    {lines.map((line, index) => (
+                                      <Line
+                                        key={line.dataKey}
+                                        type="monotone"
+                                        dataKey={line.dataKey}
+                                        name={line.name}
+                                        stroke={`hsl(${index * 60}, 70%, 50%)`}
+                                        strokeWidth={2}
+                                        dot={{ r: 4 }}
+                                      />
+                                    ))}
+                                  </LineChart>
+                                </ResponsiveContainer>
+                              </div>
+                            </div>
                           );
-                          lines = [
-                            { dataKey: "average", name: "Average Rating" },
-                          ];
-                        } else if (
-                          ["single-choice", "multiple-choice"].includes(
-                            field.type
-                          )
-                        ) {
-                          chartData = processTimeSeriesChoiceData(
-                            latest10FormsSent,
-                            field
-                          );
-                          lines = field.options.map((opt: any) => ({
-                            dataKey: opt.value,
-                            name: opt.value,
-                          }));
-                        }
+                        })}
 
-                        return (
+                      {/* Text Fields Section - Always Last */}
+                      {form.fields
+                        .filter((field: any) => field.type === "text")
+                        .map((field: any) => (
                           <div
                             key={field._id || field.id}
                             className="p-4 border rounded-lg space-y-4"
@@ -724,50 +812,20 @@ const FormDetailsPage = () => {
                             <h3 className="text-lg font-semibold">
                               {field.label}
                             </h3>
-                            <div className="h-[300px] w-full">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <LineChart
-                                  data={chartData}
-                                  margin={{
-                                    left: 0,
-                                    right: 24,
-                                    top: 8,
-                                    bottom: 8,
-                                  }}
-                                >
-                                  <XAxis
-                                    dataKey="date"
-                                    stroke="#888888"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                  />
-                                  <YAxis
-                                    stroke="#888888"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    allowDecimals={false}
-                                  />
-                                  <Tooltip />
-                                  <Legend />
-                                  {lines.map((line, index) => (
-                                    <Line
-                                      key={line.dataKey}
-                                      type="monotone"
-                                      dataKey={line.dataKey}
-                                      name={line.name}
-                                      stroke={`hsl(${index * 60}, 70%, 50%)`}
-                                      strokeWidth={2}
-                                      dot={{ r: 4 }}
-                                    />
-                                  ))}
-                                </LineChart>
-                              </ResponsiveContainer>
+                            <div className="flex items-center justify-center h-[300px] bg-gray-50 rounded-lg">
+                              <div className="text-center space-y-2">
+                                <div className="text-muted-foreground">
+                                  AI-powered response summary coming soon
+                                </div>
+                                <div className="text-sm text-muted-foreground/60">
+                                  We'll analyze and summarize text responses to
+                                  provide meaningful insights
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        );
-                      })
+                        ))}
+                    </>
                   ) : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
                       No insights available. Forms need to have submissions to
@@ -776,13 +834,16 @@ const FormDetailsPage = () => {
                   )}
                   {formsSent.some((formSent) => formSent.submissionCount > 0) &&
                     form.fields.filter((field: any) =>
-                      ["rating", "single-choice", "multiple-choice"].includes(
-                        field.type
-                      )
+                      [
+                        "rating",
+                        "single-choice",
+                        "multiple-choice",
+                        "text",
+                      ].includes(field.type)
                     ).length === 0 && (
                       <div className="text-center py-8 text-sm text-muted-foreground">
-                        No insights available. Add rating or choice questions to
-                        see insights.
+                        No insights available. Add rating, choice, or text
+                        questions to see insights.
                       </div>
                     )}
                 </div>
@@ -818,6 +879,7 @@ const FormDetailsPage = () => {
             </TabsContent>
             <TabsContent value="insights" className="flex-1 overflow-auto">
               <div className="flex flex-wrap gap-8 p-4">
+                {/* Chart Fields Section */}
                 {form.fields
                   .filter((field: any) =>
                     ["rating", "single-choice", "multiple-choice"].includes(
@@ -880,14 +942,41 @@ const FormDetailsPage = () => {
                       </div>
                     );
                   })}
+
+                {/* Text Fields Section - Always Last */}
+                {form.fields
+                  .filter((field: any) => field.type === "text")
+                  .map((field: any) => (
+                    <div
+                      key={field._id || field.id}
+                      className="p-4 border rounded-lg space-y-4 w-full"
+                    >
+                      <h3 className="text-lg font-semibold">{field.label}</h3>
+                      <div className="flex items-center justify-center h-[240px] bg-gray-50 rounded-lg">
+                        <div className="text-center space-y-2">
+                          <div className="text-muted-foreground">
+                            AI-powered response summary coming soon
+                          </div>
+                          <div className="text-sm text-muted-foreground/60">
+                            We'll analyze and summarize text responses to
+                            provide meaningful insights
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
                 {form.fields.filter((field: any) =>
-                  ["rating", "single-choice", "multiple-choice"].includes(
-                    field.type
-                  )
+                  [
+                    "rating",
+                    "single-choice",
+                    "multiple-choice",
+                    "text",
+                  ].includes(field.type)
                 ).length === 0 && (
                   <div className="w-full text-center py-8 text-sm text-muted-foreground">
-                    No insights available. Add rating or choice questions to see
-                    insights.
+                    No insights available. Add rating, choice, or text questions
+                    to see insights.
                   </div>
                 )}
               </div>
