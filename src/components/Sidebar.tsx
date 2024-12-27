@@ -1,6 +1,12 @@
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import { FileText, Users, LayoutDashboard, Headphones } from "lucide-react";
+import {
+  FileText,
+  Users,
+  LayoutDashboard,
+  Headphones,
+  CreditCard,
+} from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Logo } from "./Logo";
 
@@ -89,6 +95,18 @@ const Sidebar = ({ userEmail, companyName = "Company" }: SidebarProps) => {
 
       {/* Support */}
       <div className="p-4">
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start gap-2",
+            location.pathname === "/dashboard/subscription" &&
+              "bg-gray-200 hover:bg-gray-300"
+          )}
+          onClick={() => navigate("/dashboard/subscription")}
+        >
+          <CreditCard className="w-4 h-4" />
+          Subscription
+        </Button>
         <Button
           variant="ghost"
           className={cn(

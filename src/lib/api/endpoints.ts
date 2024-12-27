@@ -38,5 +38,8 @@ export const API_ENDPOINTS = {
   OVERVIEW: {
     STATS: "/overview",
   },
+  SUBSCRIPTION: {
+    MY_SUBSCRIPTION: "/subscriptions/my-subscription",
+  },
   // Add more endpoints as needed
 } as const;

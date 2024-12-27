@@ -10,6 +10,7 @@ import FormDetailsPage from "./pages/form/FormDetailsPage";
 import FormSubmissionPage from "./pages/form/FormSubmissionPage";
 import { OverviewPage } from "./pages/OverviewPage";
 import { SupportPage } from "@/pages/SupportPage";
+import SubscriptionPage from "@/pages/SubscriptionPage";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
             <Route path="members" element={<MembersPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="overview" element={<OverviewPage />} />
+            <Route path="subscription" element={<SubscriptionPage />} />
             <Route path="support" element={<SupportPage />} />
           </Route>
           <Route

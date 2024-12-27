@@ -160,6 +160,17 @@ interface OverviewStats {
   memberCount: number;
 }
 
+interface Subscription {
+  _id: string;
+  companyId: string;
+  plan: string;
+  maxForms: number;
+  maxMembers: number;
+  expiry: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 class ApiService {
   // GET request
   static async get<T>(endpoint: string): Promise<T> {
@@ -319,6 +330,10 @@ class ApiService {
 
   static async getOverviewStats(): Promise<OverviewStats> {
     return this.get<OverviewStats>(API_ENDPOINTS.OVERVIEW.STATS);
+  }
+
+  static async getMySubscription(): Promise<Subscription> {
+    return this.get<Subscription>(API_ENDPOINTS.SUBSCRIPTION.MY_SUBSCRIPTION);
   }
 
   static async sendForm(formId: string): Promise<any> {
