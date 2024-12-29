@@ -65,6 +65,7 @@ import {
 interface FormSent {
   _id: string;
   formId: string;
+  displayId: string;
   submissionCount: number;
   createdAt: string;
   updatedAt: string;
@@ -289,7 +290,12 @@ const FormDetailsPage = () => {
   if (loading) {
     return (
       <div className="p-8">
-        <p>Loading...</p>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Loading form details...
+          </p>
+        </div>
       </div>
     );
   }
@@ -623,6 +629,7 @@ const FormDetailsPage = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Id</TableHead>
                         <TableHead>Form Sent Date</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Submission Count</TableHead>
@@ -648,6 +655,7 @@ const FormDetailsPage = () => {
 
                           return (
                             <TableRow key={formSent._id}>
+                              <TableCell>{formSent.displayId}</TableCell>
                               <TableCell>
                                 {formatInTimeZone(
                                   new Date(formSent.createdAt),
