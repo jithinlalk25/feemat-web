@@ -320,7 +320,7 @@ function SignUpForm({
   };
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-4" onSubmit={handleSubmit} autoComplete="off">
       {error && <p className="text-sm text-red-500 text-center">{error}</p>}
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
@@ -328,6 +328,7 @@ function SignUpForm({
           id="email"
           type="email"
           placeholder="Enter your email"
+          autoComplete="new-email"
           required
         />
       </div>
@@ -340,6 +341,7 @@ function SignUpForm({
             placeholder="Enter your password"
             value={password}
             onChange={handlePasswordChange}
+            autoComplete="new-password"
             required
           />
           <button
@@ -371,6 +373,7 @@ function SignUpForm({
             placeholder="Re-enter your password"
             value={confirmPassword}
             onChange={handleConfirmPasswordChange}
+            autoComplete="new-password"
             required
           />
           <button
@@ -395,6 +398,7 @@ function SignUpForm({
           id="companyName"
           type="text"
           placeholder="Enter your company name"
+          autoComplete="off"
         />
       </div>
       <div className="space-y-2">
