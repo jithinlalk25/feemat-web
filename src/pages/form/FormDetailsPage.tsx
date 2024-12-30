@@ -1128,7 +1128,7 @@ const FormDetailsPage = () => {
                                         margin={{
                                           top: 20,
                                           left: 12,
-                                          right: 12,
+                                          right: 36,
                                           bottom: 20,
                                         }}
                                       >
