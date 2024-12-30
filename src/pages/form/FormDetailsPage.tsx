@@ -222,6 +222,42 @@ const FormDetailsPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [timezone, setTimezone] = useState<string>("");
   const [isSending, setIsSending] = useState(false);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+
+  const fetchFormData = async () => {
+    try {
+      const [formData, formsSentData, groupsData, membersData] =
+        await Promise.all([
+          ApiService.getFormById(formId!),
+          ApiService.getFormsSent(formId!),
+          ApiService.getGroups(),
+          ApiService.getMembers(),
+        ]);
+      setForm(formData);
+      setFormsSent(formsSentData);
+      setGroups(groupsData);
+      setMembers(membersData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      await fetchFormData();
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [formId]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      fetchFormData();
+    }
+  }, [isEditing]);
 
   useEffect(() => {
     // Get timezone from localStorage or fall back to system timezone
@@ -267,63 +303,6 @@ const FormDetailsPage = () => {
       setIsEditing(true);
     }
   }, [location.state]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [formData, formsSentData] = await Promise.all([
-          ApiService.getFormById(formId!),
-          ApiService.getFormsSent(formId!),
-        ]);
-        setForm(formData);
-        setFormsSent(formsSentData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [formId]);
-
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            Loading form details...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!form) {
-    return (
-      <div className="p-8">
-        <p>Form not found</p>
-      </div>
-    );
-  }
-
-  const breadcrumbItems = [
-    { href: "/dashboard/forms", label: "Forms" },
-    {
-      href: `/dashboard/forms/${formId}`,
-      label: "Details",
-      onClick: (e: React.MouseEvent) => {
-        if (isEditing) {
-          e.preventDefault();
-          setIsEditing(false);
-        }
-      },
-    },
-    ...(isEditing
-      ? [{ href: `/dashboard/forms/${formId}`, label: "Edit" }]
-      : []),
-  ];
 
   const handleViewSubmissions = async (formSentId: string) => {
     setIsDialogOpen(true);
@@ -489,6 +468,44 @@ const FormDetailsPage = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Loading form details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!form) {
+    return (
+      <div className="p-8">
+        <p>Form not found</p>
+      </div>
+    );
+  }
+
+  const breadcrumbItems = [
+    { href: "/dashboard/forms", label: "Forms" },
+    {
+      href: `/dashboard/forms/${formId}`,
+      label: "Details",
+      onClick: (e: React.MouseEvent) => {
+        if (isEditing) {
+          e.preventDefault();
+          setIsEditing(false);
+        }
+      },
+    },
+    ...(isEditing
+      ? [{ href: `/dashboard/forms/${formId}`, label: "Edit" }]
+      : []),
+  ];
+
   return (
     <div className="p-8">
       <Breadcrumb items={breadcrumbItems} />
@@ -614,8 +631,18 @@ const FormDetailsPage = () => {
           </AlertDialog>
 
           <div className="mt-8">
-            <Tabs defaultValue="history">
+            <Tabs
+              defaultValue="details"
+              onValueChange={() => {
+                if (!isEditing) {
+                  fetchFormData();
+                }
+              }}
+            >
               <TabsList className="w-full">
+                <TabsTrigger value="details" className="flex-1">
+                  Details
+                </TabsTrigger>
                 <TabsTrigger value="history" className="flex-1">
                   Form Sent History
                 </TabsTrigger>
@@ -623,6 +650,344 @@ const FormDetailsPage = () => {
                   Insights
                 </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="details" className="mt-4">
+                <div className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">
+                          Fields ({form.fields?.length || 0})
+                        </h3>
+                        <div className="space-y-2">
+                          {form.fields?.map((field: any) => (
+                            <div
+                              key={field._id || field.id}
+                              className="flex flex-col py-2"
+                            >
+                              <div className="flex items-center">
+                                <span className="font-medium">
+                                  {field.label}
+                                  {field.isRequired && (
+                                    <span className="text-destructive ml-0.5">
+                                      *
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-sm text-muted-foreground ml-2">
+                                  ({field.type})
+                                </span>
+                              </div>
+                              {(field.type === "single-choice" ||
+                                field.type === "multiple-choice") &&
+                                field.options && (
+                                  <div className="mt-1 ml-4">
+                                    {field.options.map((option: any) => (
+                                      <div
+                                        key={option._id || option.id}
+                                        className="text-sm text-muted-foreground"
+                                      >
+                                        • {option.value}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                            </div>
+                          ))}
+                          {(!form.fields || form.fields.length === 0) && (
+                            <div className="text-sm text-muted-foreground">
+                              No fields added
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">
+                          Form Settings
+                        </h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Status
+                            </span>
+                            <span className="font-medium">
+                              {form.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Anonymous Submissions
+                            </span>
+                            <span className="font-medium">
+                              {form.isAnonymous ? "Yes" : "No"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Expiry Time
+                            </span>
+                            <span className="font-medium">
+                              {form.expiryTime === "no_expiry"
+                                ? "Never"
+                                : form.expiryTime === "6_hours"
+                                ? "6 Hours"
+                                : form.expiryTime === "12_hours"
+                                ? "12 Hours"
+                                : form.expiryTime === "1_day"
+                                ? "1 Day"
+                                : form.expiryTime === "3_days"
+                                ? "3 Days"
+                                : "Never"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Send Reminder Email
+                            </span>
+                            <span className="font-medium">
+                              {form.reminderEmail ? "Yes" : "No"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Schedule</h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Type</span>
+                            <span className="font-medium">
+                              {form.schedule?.type === "no_schedule"
+                                ? "No Schedule"
+                                : form.schedule?.type === "one_time"
+                                ? "One Time"
+                                : form.schedule?.type === "recurring"
+                                ? "Recurring"
+                                : "No Schedule"}
+                            </span>
+                          </div>
+                          {form.schedule?.type === "one_time" && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                Date and Time
+                              </span>
+                              <span className="font-medium">
+                                {form.schedule.date && form.schedule.time
+                                  ? formatInTimeZone(
+                                      new Date(
+                                        `${form.schedule.date}T${form.schedule.time}`
+                                      ),
+                                      timezone,
+                                      "PPP HH:mm"
+                                    )
+                                  : "Not set"}
+                              </span>
+                            </div>
+                          )}
+                          {form.schedule?.type === "recurring" && (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                  Start Time
+                                </span>
+                                <span className="font-medium">
+                                  {form.schedule.recurringTime || "Not set"}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                  Frequency
+                                </span>
+                                <span className="font-medium capitalize">
+                                  {form.schedule.frequency || "Not set"}
+                                </span>
+                              </div>
+                              {form.schedule.frequency === "weekly" &&
+                                form.schedule.weekDays && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                      Days
+                                    </span>
+                                    <span className="font-medium">
+                                      {form.schedule.weekDays
+                                        .map((day: number) => {
+                                          const dayName = [
+                                            "Monday",
+                                            "Tuesday",
+                                            "Wednesday",
+                                            "Thursday",
+                                            "Friday",
+                                            "Saturday",
+                                            "Sunday",
+                                          ][day - 1];
+                                          return dayName;
+                                        })
+                                        .join(", ")}
+                                    </span>
+                                  </div>
+                                )}
+                              {form.schedule.frequency === "monthly" &&
+                                form.schedule.monthDays && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                      Days of Month
+                                    </span>
+                                    <span className="font-medium">
+                                      {form.schedule.monthDays.join(", ")}
+                                    </span>
+                                  </div>
+                                )}
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                  End Condition
+                                </span>
+                                <span className="font-medium">
+                                  {form.schedule.endCondition === "no_end_date"
+                                    ? "No end date"
+                                    : form.schedule.endCondition ===
+                                      "end_by_date"
+                                    ? "End by date"
+                                    : "Not set"}
+                                </span>
+                              </div>
+                              {form.schedule.endCondition === "end_by_date" &&
+                                form.schedule.endDate && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                      End Date
+                                    </span>
+                                    <span className="font-medium">
+                                      {formatInTimeZone(
+                                        new Date(form.schedule.endDate),
+                                        timezone,
+                                        "PPP"
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">
+                          Recipients
+                        </h3>
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">
+                              Groups ({form.members?.groupIds?.length || 0})
+                            </h4>
+                            <div className="space-y-2">
+                              {form.members?.groupIds?.map(
+                                (groupId: string) => {
+                                  const group = groups.find(
+                                    (g) => g._id === groupId
+                                  );
+                                  return (
+                                    <div
+                                      key={groupId}
+                                      className="text-sm text-muted-foreground"
+                                    >
+                                      {group?.name || "Unknown Group"}
+                                    </div>
+                                  );
+                                }
+                              )}
+                              {(!form.members?.groupIds ||
+                                form.members.groupIds.length === 0) && (
+                                <div className="text-sm text-muted-foreground">
+                                  No groups added
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">
+                              Members ({form.members?.memberIds?.length || 0})
+                            </h4>
+                            <div className="space-y-2">
+                              {form.members?.memberIds?.map(
+                                (memberId: string) => {
+                                  const member = members.find(
+                                    (m) => m._id === memberId
+                                  );
+                                  return (
+                                    <div
+                                      key={memberId}
+                                      className="text-sm text-muted-foreground"
+                                    >
+                                      {member?.email || "Unknown Member"}
+                                    </div>
+                                  );
+                                }
+                              )}
+                              {(!form.members?.memberIds ||
+                                form.members.memberIds.length === 0) && (
+                                <div className="text-sm text-muted-foreground">
+                                  No members added
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">
+                          Timestamps
+                        </h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Created At
+                            </span>
+                            <span className="font-medium">
+                              {form.createdAt &&
+                              !isNaN(new Date(form.createdAt).getTime())
+                                ? formatInTimeZone(
+                                    new Date(form.createdAt),
+                                    timezone,
+                                    "MMM d, yyyy h:mm a"
+                                  )
+                                : "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Updated At
+                            </span>
+                            <span className="font-medium">
+                              {form.updatedAt &&
+                              !isNaN(new Date(form.updatedAt).getTime())
+                                ? formatInTimeZone(
+                                    new Date(form.updatedAt),
+                                    timezone,
+                                    "MMM d, yyyy h:mm a"
+                                  )
+                                : "N/A"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => setIsEditing(true)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Edit Form
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
 
               <TabsContent value="history" className="mt-4">
                 <div className="rounded-md border">
