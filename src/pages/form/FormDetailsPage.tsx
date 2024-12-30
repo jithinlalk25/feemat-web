@@ -37,6 +37,7 @@ import {
   Line,
   CartesianGrid,
   LabelList,
+  Legend,
 } from "recharts";
 import {
   DropdownMenu,
@@ -1077,6 +1078,7 @@ const FormDetailsPage = () => {
                             .reverse();
 
                           let chartData: TimeSeriesData[] = [];
+                          let config: Record<string, any> = {};
 
                           if (field.type === "rating") {
                             chartData = processTimeSeriesRatingData(
@@ -1084,6 +1086,12 @@ const FormDetailsPage = () => {
                               field,
                               timezone
                             );
+                            config = {
+                              average: {
+                                label: "Average Rating",
+                                color: "hsl(var(--chart-1))",
+                              },
+                            };
                           } else if (
                             ["single-choice", "multiple-choice"].includes(
                               field.type
@@ -1093,6 +1101,17 @@ const FormDetailsPage = () => {
                               latest10FormsSent,
                               field,
                               timezone
+                            );
+                            // Create config for each option with different colors
+                            field.options.forEach(
+                              (option: any, index: number) => {
+                                config[option.value] = {
+                                  label: option.value,
+                                  color: `hsl(var(--chart-${
+                                    (index % 12) + 1
+                                  }))`,
+                                };
+                              }
                             );
                           }
 
@@ -1110,19 +1129,7 @@ const FormDetailsPage = () => {
                                     width="100%"
                                     height="100%"
                                   >
-                                    <ChartContainer
-                                      config={{
-                                        [field.type === "rating"
-                                          ? "average"
-                                          : field.options[0]?.value]: {
-                                          label:
-                                            field.type === "rating"
-                                              ? "Average Rating"
-                                              : field.options[0]?.value,
-                                          color: "hsl(var(--chart-1))",
-                                        },
-                                      }}
-                                    >
+                                    <ChartContainer config={config}>
                                       <LineChart
                                         data={chartData}
                                         margin={{
@@ -1190,35 +1197,73 @@ const FormDetailsPage = () => {
                                             <ChartTooltipContent indicator="line" />
                                           }
                                         />
-                                        <Line
-                                          type="natural"
-                                          dataKey={
-                                            field.type === "rating"
-                                              ? "average"
-                                              : field.options[0]?.value
-                                          }
-                                          stroke="hsl(var(--chart-1))"
-                                          strokeWidth={2}
-                                          dot={{
-                                            fill: "hsl(var(--chart-1))",
-                                            r: 4,
-                                          }}
-                                          activeDot={{
-                                            r: 6,
-                                          }}
-                                        >
-                                          <LabelList
-                                            dataKey={
-                                              field.type === "rating"
-                                                ? "average"
-                                                : field.options[0]?.value
-                                            }
-                                            position="top"
-                                            offset={10}
-                                            fill="#888888"
-                                            fontSize={12}
+                                        {field.type !== "rating" && (
+                                          <Legend
+                                            verticalAlign="bottom"
+                                            height={36}
+                                            iconType="circle"
+                                            iconSize={8}
+                                            formatter={(value) => (
+                                              <span className="text-sm">
+                                                {value}
+                                              </span>
+                                            )}
                                           />
-                                        </Line>
+                                        )}
+                                        {field.type === "rating" ? (
+                                          <Line
+                                            type="natural"
+                                            dataKey="average"
+                                            stroke="hsl(var(--chart-1))"
+                                            strokeWidth={2}
+                                            dot={{
+                                              fill: "hsl(var(--chart-1))",
+                                              r: 4,
+                                            }}
+                                            activeDot={{
+                                              r: 6,
+                                            }}
+                                          >
+                                            <LabelList
+                                              dataKey="average"
+                                              position="top"
+                                              offset={10}
+                                              fill="#888888"
+                                              fontSize={12}
+                                            />
+                                          </Line>
+                                        ) : (
+                                          field.options.map(
+                                            (option: any, index: number) => (
+                                              <Line
+                                                key={option._id || option.id}
+                                                type="natural"
+                                                dataKey={option.value}
+                                                stroke={`hsl(var(--chart-${
+                                                  (index % 12) + 1
+                                                }))`}
+                                                strokeWidth={2}
+                                                dot={{
+                                                  fill: `hsl(var(--chart-${
+                                                    (index % 12) + 1
+                                                  }))`,
+                                                  r: 4,
+                                                }}
+                                                activeDot={{
+                                                  r: 6,
+                                                }}
+                                              >
+                                                <LabelList
+                                                  dataKey={option.value}
+                                                  position="top"
+                                                  offset={10}
+                                                  fill="#888888"
+                                                  fontSize={12}
+                                                />
+                                              </Line>
+                                            )
+                                          )
+                                        )}
                                       </LineChart>
                                     </ChartContainer>
                                   </ResponsiveContainer>
