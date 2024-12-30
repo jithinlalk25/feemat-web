@@ -666,17 +666,17 @@ const FormDetailsPage = () => {
                               className="flex flex-col py-2"
                             >
                               <div className="flex items-center">
-                                <span className="font-medium">
+                                <div className="font-medium">
                                   {field.label}
                                   {field.isRequired && (
                                     <span className="text-destructive ml-0.5">
                                       *
                                     </span>
                                   )}
-                                </span>
-                                <span className="text-sm text-muted-foreground ml-2">
-                                  ({field.type})
-                                </span>
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    ({field.type})
+                                  </span>
+                                </div>
                               </div>
                               {(field.type === "single-choice" ||
                                 field.type === "multiple-choice") &&
@@ -882,56 +882,34 @@ const FormDetailsPage = () => {
                             <h4 className="text-sm font-medium mb-2">
                               Groups ({form.members?.groupIds?.length || 0})
                             </h4>
-                            <div className="space-y-2">
-                              {form.members?.groupIds?.map(
-                                (groupId: string) => {
-                                  const group = groups.find(
-                                    (g) => g._id === groupId
-                                  );
-                                  return (
-                                    <div
-                                      key={groupId}
-                                      className="text-sm text-muted-foreground"
-                                    >
-                                      {group?.name || "Unknown Group"}
-                                    </div>
-                                  );
-                                }
-                              )}
-                              {(!form.members?.groupIds ||
-                                form.members.groupIds.length === 0) && (
-                                <div className="text-sm text-muted-foreground">
-                                  No groups added
-                                </div>
-                              )}
+                            <div className="text-sm text-muted-foreground">
+                              {form.members?.groupIds?.length > 0
+                                ? form.members.groupIds
+                                    .map((groupId: string) => {
+                                      const group = groups.find(
+                                        (g) => g._id === groupId
+                                      );
+                                      return group?.name || "Unknown Group";
+                                    })
+                                    .join(", ")
+                                : "No groups added"}
                             </div>
                           </div>
                           <div>
                             <h4 className="text-sm font-medium mb-2">
                               Members ({form.members?.memberIds?.length || 0})
                             </h4>
-                            <div className="space-y-2">
-                              {form.members?.memberIds?.map(
-                                (memberId: string) => {
-                                  const member = members.find(
-                                    (m) => m._id === memberId
-                                  );
-                                  return (
-                                    <div
-                                      key={memberId}
-                                      className="text-sm text-muted-foreground"
-                                    >
-                                      {member?.email || "Unknown Member"}
-                                    </div>
-                                  );
-                                }
-                              )}
-                              {(!form.members?.memberIds ||
-                                form.members.memberIds.length === 0) && (
-                                <div className="text-sm text-muted-foreground">
-                                  No members added
-                                </div>
-                              )}
+                            <div className="text-sm text-muted-foreground">
+                              {form.members?.memberIds?.length > 0
+                                ? form.members.memberIds
+                                    .map((memberId: string) => {
+                                      const member = members.find(
+                                        (m) => m._id === memberId
+                                      );
+                                      return member?.email || "Unknown Member";
+                                    })
+                                    .join(", ")
+                                : "No members added"}
                             </div>
                           </div>
                         </div>
@@ -975,16 +953,6 @@ const FormDetailsPage = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={() => setIsEditing(true)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Edit Form
-                    </Button>
                   </div>
                 </div>
               </TabsContent>
