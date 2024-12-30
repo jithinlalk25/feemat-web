@@ -25,7 +25,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
-import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import {
   Bar,
@@ -36,7 +35,8 @@ import {
   Tooltip,
   LineChart,
   Line,
-  Legend,
+  CartesianGrid,
+  LabelList,
 } from "recharts";
 import {
   DropdownMenu,
@@ -61,6 +61,17 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "../../components/ui/hover-card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "../../components/ui/chart";
 
 interface FormSent {
   _id: string;
@@ -159,14 +170,16 @@ const calculateChartWidth = (dataLength: number) => {
 
 const processTimeSeriesRatingData = (
   formsSent: FormSent[],
-  field: any
+  field: any,
+  timezone: string
 ): TimeSeriesData[] => {
   return formsSent.map((formSent) => {
-    // Get the field data using field ID as key
     const fieldData = (formSent as any).fields?.[field._id || field.id];
+    const date = new Date(formSent.createdAt);
 
     return {
-      date: format(new Date(formSent.createdAt), "MMM d"),
+      date: formatInTimeZone(date, timezone, "MMM dd, yyyy"),
+      time: formatInTimeZone(date, timezone, "hh:mm aa"),
       average: fieldData?.ratingAverage || 0,
     };
   });
@@ -174,7 +187,8 @@ const processTimeSeriesRatingData = (
 
 const processTimeSeriesChoiceData = (
   formsSent: FormSent[],
-  field: any
+  field: any,
+  timezone: string
 ): TimeSeriesData[] => {
   const options = field.options.reduce(
     (acc: Record<string, string>, opt: any) => {
@@ -187,13 +201,11 @@ const processTimeSeriesChoiceData = (
   return formsSent.map((formSent) => {
     const fieldData = (formSent as any).fields?.[field._id || field.id];
     const optionCounts = fieldData?.options || {};
+    const date = new Date(formSent.createdAt);
 
-    // Initialize counts for all options
     const counts = Object.keys(options).reduce(
       (acc: Record<string, number>, optionId) => {
-        // Get the option value (label) for this optionId
         const optionValue = options[optionId];
-        // Get the count from optionCounts or default to 0
         acc[optionValue] = optionCounts[optionId] || 0;
         return acc;
       },
@@ -201,7 +213,8 @@ const processTimeSeriesChoiceData = (
     );
 
     return {
-      date: format(new Date(formSent.createdAt), "MMM d"),
+      date: formatInTimeZone(date, timezone, "MMM dd, yyyy"),
+      time: formatInTimeZone(date, timezone, "hh:mm aa"),
       ...counts,
     };
   });
@@ -1038,7 +1051,7 @@ const FormDetailsPage = () => {
               </TabsContent>
 
               <TabsContent value="insights" className="mt-4">
-                <div className="space-y-8">
+                <div className="grid gap-8">
                   {formsSent.some(
                     (formSent) => formSent.submissionCount > 0
                   ) ? (
@@ -1064,16 +1077,13 @@ const FormDetailsPage = () => {
                             .reverse();
 
                           let chartData: TimeSeriesData[] = [];
-                          let lines: { dataKey: string; name: string }[] = [];
 
                           if (field.type === "rating") {
                             chartData = processTimeSeriesRatingData(
                               latest10FormsSent,
-                              field
+                              field,
+                              timezone
                             );
-                            lines = [
-                              { dataKey: "average", name: "Average Rating" },
-                            ];
                           } else if (
                             ["single-choice", "multiple-choice"].includes(
                               field.type
@@ -1081,64 +1091,140 @@ const FormDetailsPage = () => {
                           ) {
                             chartData = processTimeSeriesChoiceData(
                               latest10FormsSent,
-                              field
+                              field,
+                              timezone
                             );
-                            lines = field.options.map((opt: any) => ({
-                              dataKey: opt.value,
-                              name: opt.value,
-                            }));
                           }
 
                           return (
-                            <div
+                            <Card
                               key={field._id || field.id}
-                              className="p-4 border rounded-lg space-y-4"
+                              className="overflow-hidden"
                             >
-                              <h3 className="text-lg font-semibold">
-                                {field.label}
-                              </h3>
-                              <div className="h-[300px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                  <LineChart
-                                    data={chartData}
-                                    margin={{
-                                      left: 0,
-                                      right: 24,
-                                      top: 8,
-                                      bottom: 8,
-                                    }}
+                              <CardHeader>
+                                <CardTitle>{field.label}</CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-6">
+                                <div className="aspect-[3/1] w-full">
+                                  <ResponsiveContainer
+                                    width="100%"
+                                    height="100%"
                                   >
-                                    <XAxis
-                                      dataKey="date"
-                                      stroke="#888888"
-                                      fontSize={12}
-                                      tickLine={false}
-                                      axisLine={false}
-                                    />
-                                    <YAxis
-                                      stroke="#888888"
-                                      fontSize={12}
-                                      tickLine={false}
-                                      axisLine={false}
-                                      allowDecimals={false}
-                                    />
-                                    <Tooltip />
-                                    <Legend />
-                                    {lines.map((line, index) => (
-                                      <Line
-                                        key={line.dataKey}
-                                        type="monotone"
-                                        dataKey={line.dataKey}
-                                        name={line.name}
-                                        stroke={`hsl(${index * 60}, 70%, 50%)`}
-                                        strokeWidth={2}
-                                        dot={{ r: 4 }}
-                                      />
-                                    ))}
-                                  </LineChart>
-                                </ResponsiveContainer>
-                              </div>
-                            </div>
+                                    <ChartContainer
+                                      config={{
+                                        [field.type === "rating"
+                                          ? "average"
+                                          : field.options[0]?.value]: {
+                                          label:
+                                            field.type === "rating"
+                                              ? "Average Rating"
+                                              : field.options[0]?.value,
+                                          color: "hsl(var(--chart-1))",
+                                        },
+                                      }}
+                                    >
+                                      <LineChart
+                                        data={chartData}
+                                        margin={{
+                                          top: 20,
+                                          left: 12,
+                                          right: 12,
+                                          bottom: 20,
+                                        }}
+                                      >
+                                        <CartesianGrid vertical={false} />
+                                        <XAxis
+                                          dataKey="date"
+                                          tickLine={false}
+                                          axisLine={false}
+                                          tickMargin={16}
+                                          height={60}
+                                          interval={0}
+                                          tick={({ x, y, payload }) => (
+                                            <g
+                                              transform={`translate(${x},${y})`}
+                                            >
+                                              <text
+                                                x={0}
+                                                y={0}
+                                                dy={0}
+                                                textAnchor="middle"
+                                                fill="#888888"
+                                                fontSize={12}
+                                              >
+                                                {payload.value}
+                                              </text>
+                                              <text
+                                                x={0}
+                                                y={0}
+                                                dy={20}
+                                                textAnchor="middle"
+                                                fill="#888888"
+                                                fontSize={12}
+                                              >
+                                                {chartData[payload.index]?.time}
+                                              </text>
+                                            </g>
+                                          )}
+                                        />
+                                        <YAxis
+                                          stroke="#888888"
+                                          fontSize={12}
+                                          tickLine={false}
+                                          axisLine={false}
+                                          allowDecimals={false}
+                                          domain={
+                                            field.type === "rating"
+                                              ? [0, 5]
+                                              : [0, "auto"]
+                                          }
+                                          ticks={
+                                            field.type === "rating"
+                                              ? [0, 1, 2, 3, 4, 5]
+                                              : undefined
+                                          }
+                                        />
+                                        <ChartTooltip
+                                          cursor={false}
+                                          content={
+                                            <ChartTooltipContent indicator="line" />
+                                          }
+                                        />
+                                        <Line
+                                          type="natural"
+                                          dataKey={
+                                            field.type === "rating"
+                                              ? "average"
+                                              : field.options[0]?.value
+                                          }
+                                          stroke="hsl(var(--chart-1))"
+                                          strokeWidth={2}
+                                          dot={{
+                                            fill: "hsl(var(--chart-1))",
+                                            r: 4,
+                                          }}
+                                          activeDot={{
+                                            r: 6,
+                                          }}
+                                        >
+                                          <LabelList
+                                            dataKey={
+                                              field.type === "rating"
+                                                ? "average"
+                                                : field.options[0]?.value
+                                            }
+                                            position="top"
+                                            offset={10}
+                                            fill="#888888"
+                                            fontSize={12}
+                                          />
+                                        </Line>
+                                      </LineChart>
+                                    </ChartContainer>
+                                  </ResponsiveContainer>
+                                </div>
+                              </CardContent>
+                            </Card>
                           );
                         })}
 
@@ -1150,7 +1236,7 @@ const FormDetailsPage = () => {
                             key={field._id || field.id}
                             className="p-4 border rounded-lg space-y-4"
                           >
-                            <h3 className="text-lg font-semibold">
+                            <h3 className="text-lg font-semibold mb-2">
                               {field.label}
                             </h3>
                             <div className="flex items-center justify-center h-[300px] bg-gray-50 rounded-lg">
@@ -1267,7 +1353,14 @@ const FormDetailsPage = () => {
                                 tickLine={false}
                                 axisLine={false}
                                 allowDecimals={false}
-                                width={24}
+                                domain={
+                                  field.type === "rating" ? [0, 5] : [0, "auto"]
+                                }
+                                ticks={
+                                  field.type === "rating"
+                                    ? [0, 1, 2, 3, 4, 5]
+                                    : undefined
+                                }
                               />
                               <Tooltip />
                               <Bar
