@@ -1382,7 +1382,12 @@ const FormDetailsPage = () => {
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                               data={chartData}
-                              margin={{ left: 0, right: 24, top: 8, bottom: 8 }}
+                              margin={{
+                                left: 0,
+                                right: 24,
+                                top: 8,
+                                bottom: 48,
+                              }}
                             >
                               <XAxis
                                 dataKey="name"
@@ -1391,6 +1396,9 @@ const FormDetailsPage = () => {
                                 tickLine={false}
                                 axisLine={false}
                                 interval={0}
+                                angle={-45}
+                                textAnchor="end"
+                                height={60}
                               />
                               <YAxis
                                 stroke="#888888"
@@ -1398,14 +1406,7 @@ const FormDetailsPage = () => {
                                 tickLine={false}
                                 axisLine={false}
                                 allowDecimals={false}
-                                domain={
-                                  field.type === "rating" ? [0, 5] : [0, "auto"]
-                                }
-                                ticks={
-                                  field.type === "rating"
-                                    ? [0, 1, 2, 3, 4, 5]
-                                    : undefined
-                                }
+                                domain={[0, "auto"]}
                               />
                               <Tooltip />
                               <Bar
